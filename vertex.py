@@ -28,4 +28,14 @@ class Vertex:
             self.in_edges[source].append(Edge(sequence + source.sequence[-1]))
         self.out_edges = defaultdict(list)
 
+    def __eq__(self, other):
+        return other.__class__ == self.__class__ and self.sequence == other.sequence
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash(self.sequence)
+
+    def __str__(self):
+        return str(self.__dict__)
