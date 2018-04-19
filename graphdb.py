@@ -37,10 +37,10 @@ class GraphDB:
             # Could be rewritten with dict instead of set without looping
             e = Edge(source[0] + destination)
             self.graph[Vertex(source)].add(e)
-            # next(iter(self.graph[Vertex(source)])).increase_source_coverage()
+            # next(iter(self.graph[Vertex(source)])).increase_coverage()
             for edge in self.graph[Vertex(source)]:
                 if edge == e:
-                    edge.increase_source_coverage()
+                    edge.increase_coverage()
 
     def compute_coverage(self):
         """
@@ -48,10 +48,7 @@ class GraphDB:
         :return:
         """
         for vertex, edges in self.graph.items():
-            vertex.coverage = str(sum(edge.source_coverage for edge in edges))
-            # TODO remove source_coverage and assign it to coverage
-            for edge in edges:
-                edge.coverage = edge.source_coverage
+            vertex.coverage = sum(edge.coverage for edge in edges)
 
     # def compute_edge_coverage(self):
     #     for edges in self.graph.values():
@@ -68,7 +65,7 @@ class GraphDB:
         # Cleave all reads to kmers
         for read in reads:
             self.add_read(str(read.seq).upper())
-            self.add_read(str(read.reverse_complement().seq).upper())
+            # self.add_read(str(read.reverse_complement().seq).upper())
 
     def plot(self, filename, include_seq=False):
         """
@@ -98,7 +95,7 @@ class GraphDB:
 
 
 if __name__ == '__main__':
-    a = GraphDB('test5', 4)
+    a = GraphDB('test', 6)
     a.fragmentate()
     a.compute_coverage()
 

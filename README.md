@@ -7,6 +7,7 @@ To take a copy of our GA you should run this command in terminal
 
 `git clone https://github.com/Serfentum/genome_assembler.git`
 
+After this you can make use of GA with graphdb.py as an entry point.
 
 ## Prerequisites
 1. python3.x interpretator
