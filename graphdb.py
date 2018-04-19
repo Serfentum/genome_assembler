@@ -6,8 +6,6 @@ from graphviz import Digraph
 
 
 class GraphDB:
-    # Make reverse complement of reads
-
     def __init__(self, path, k):
         """
         GraphDB initializer
@@ -69,6 +67,7 @@ class GraphDB:
         # Cleave all reads to kmers
         for read in reads:
             self.add_read(str(read.seq).upper())
+            # self.add_read(str(read.reverse_complement().seq).upper())
 
     def plot(self, filename, include_seq=False):
         """
@@ -98,7 +97,7 @@ class GraphDB:
 
 
 if __name__ == '__main__':
-    a = GraphDB('test', 4)
+    a = GraphDB('test4', 3)
     a.fragmentate()
     a.compute_coverage()
 
