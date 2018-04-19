@@ -34,6 +34,7 @@ class GraphDB:
         # Note the last kmer didn`t get Vertex object and coverage, it will obtain it from other reads
         # if they have such kmer
         for source, destination in zip(kmers, kmers[1:]):
+            # Could be rewritten with dict instead of set without looping
             e = Edge(source[0] + destination)
             self.graph[Vertex(source)].add(e)
             # next(iter(self.graph[Vertex(source)])).increase_source_coverage()
@@ -67,7 +68,7 @@ class GraphDB:
         # Cleave all reads to kmers
         for read in reads:
             self.add_read(str(read.seq).upper())
-            # self.add_read(str(read.reverse_complement().seq).upper())
+            self.add_read(str(read.reverse_complement().seq).upper())
 
     def plot(self, filename, include_seq=False):
         """
@@ -97,7 +98,7 @@ class GraphDB:
 
 
 if __name__ == '__main__':
-    a = GraphDB('test4', 3)
+    a = GraphDB('test5', 4)
     a.fragmentate()
     a.compute_coverage()
 
