@@ -95,7 +95,7 @@ class GraphDB:
 
 
 if __name__ == '__main__':
-    a = GraphDB('test', 6)
+    a = GraphDB('test', 5)
     a.fragmentate()
     a.compute_coverage()
 
