@@ -5,9 +5,9 @@ digraph {
 	GCC [label="GCC 3"]
 	CCA [label="CCA 2"]
 	CAT [label="CAT 2"]
-	GCC -> CCA [label="GCCA 4 2.5"]
-	TGC -> GCC [label="TGCC 4 3.0"]
 	ATG -> TGC [label="ATGC 4 2.5"]
+	TGC -> GCC [label="TGCC 4 3.0"]
+	GCC -> CCA [label="GCCA 4 2.5"]
 	CCA -> CAT [label="CCAT 4 2.0"]
 	CAT -> ATG [label="CATG 4 2.0"]
 }

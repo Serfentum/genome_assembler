@@ -11,7 +11,7 @@ class Graph:
         self.reads = SeqIO.parse(path, 'fasta')
         self.k = k
         self.graph_scheme = {}
-        self.edge_set = set()
+        self.edges = {}
 
     def plot(self, filename, include_seq=False):
         """
@@ -27,12 +27,12 @@ class Graph:
         if include_seq:
             for v, out in self.graph_scheme.values():
                 dot.node(v.sequence, label=f'{v.sequence} {v.coverage}')
-            for e in self.edge_set:
+            for e in self.edges.values():
                 dot.edge(e.sequence[:-1], e.sequence[1:], label=f'{e.sequence} {self.k + len(e.coverages) - 1} {e.coverage}')
         else:
             for v, out in self.graph_scheme.values():
                 dot.node(v.sequence, label=f'{v.coverage}')
-            for e in self.edge_set:
+            for e in self.edges.values():
                 dot.edge(e.sequence[:-1], e.sequence[1:], label=f'{self.k + len(e.coverages) - 1} {e.coverage}')
         # Save pdf
         dot.render(filename, view=True)
@@ -42,14 +42,26 @@ class Graph:
     #     # Add new links in graph
     #     # Delete adjacent intermediate vertex and replace links between vertex, it and next vertices, replace edges
     #     for vertex, adjacents in self.graph_scheme.values():
-    #         if vertex.out_degree == 1 and self.graph_scheme[adjacents[0]].in_degree == 1:
+    #         if vertex.out_degree == 1 and self.graph_scheme[adjacents[0]][0].in_degree == 1:
+    #             neighbour = adjacents[0]
     #             # Clear adjacency list
-    #             self.graph_scheme[vertex.sequence][1].clear()
+    #             first_vertex = self.graph_scheme[vertex.sequence]
+    #             first_vertex[1].clear()
     #             # self.edge_set.discard(Edge(vertex, self.graph_scheme[adjacents[0]][0]))
     #             # Add new links and modify edges in set
-    #             for next_vertex, _ in self.graph_scheme[adjacents[0]][1]:
-    #                 self.graph_scheme[vertex.sequence][1].append(next_vertex)
-    #                 self.edge_set
+    #             # print(neighbour)
+    #             # print(self.graph_scheme[neighbour])
+    #             for next_vertex in self.graph_scheme[neighbour]:
+    #                 # print(first_vertex)
+    #                 # print(type(first_vertex))
+    #                 # print(first_vertex[1])
+    #                 # print(self.graph_scheme[neighbour])
+    #                 first_vertex[1].append(next_vertex[0])
+    #                 for edge in self.edge_set:
+    #                     if edge.source == vertex and edge.dest == self.graph_scheme[adjacents[0]][0]:
+    #                         self.edge_set.discard(edge)
+    #                     elif edge.source == self.graph_scheme[adjacents[0]][0] and edge.dest == next_vertex[0]:
+    #                         edge.add_part(vertex)
 
 
 
@@ -75,11 +87,14 @@ class Graph:
             if source in self.graph_scheme and destination in self.graph_scheme:
                 self.graph_scheme[source][0].increase_coverage()
                 self.graph_scheme[destination][0].increase_coverage()
-                edge = Edge(self.graph_scheme[source][0], self.graph_scheme[destination][0])
-                if edge not in self.edge_set:
+                if (source, destination) not in self.edges:
                     self.graph_scheme[source][0].increase_out_degree()
                     self.graph_scheme[destination][0].increase_in_degree()
-                    self.edge_set.add(edge)
+
+                    self.graph_scheme[source][1].append(destination)
+
+                    edge = Edge(self.graph_scheme[source][0], self.graph_scheme[destination][0])
+                    self.edges[(source, destination)] = edge
                 continue
 
             # Create absent vertex
@@ -97,15 +112,16 @@ class Graph:
             # Increase vertex coverage
             self.graph_scheme[source][0].increase_coverage()
             self.graph_scheme[destination][0].increase_coverage()
-            # Add edge to edges set
-            self.edge_set.add(Edge(self.graph_scheme[source][0], self.graph_scheme[destination][0]))
+            # Add link in graph edge to edges set
+            self.graph_scheme[source][1].append(destination)
+            self.edges[(source, destination)] = Edge(self.graph_scheme[source][0], self.graph_scheme[destination][0])
 
     def cover_edges(self):
-        for edge in self.edge_set:
+        for edge in self.edges.values():
             edge.ini_cover()
 
     def edge_coverage(self):
-        for edge in self.edge_set:
+        for edge in self.edges.values():
             edge.compute_coverage()
 
     # TODO kmer all reads and create from them vertices and edges
@@ -122,9 +138,10 @@ a = Graph('../test4', 3)
 # compute edge coverage
 # plot graph
 a.fragmentate()
+print(a.graph_scheme)
 a.cover_edges()
 
-
+# a.collapse()
 a.edge_coverage()
 
 a.plot('fd', True)
@@ -133,5 +150,5 @@ a.plot('fd', True)
 for v in a.graph_scheme.values():
     print(v[0])
 
-for e in a.edge_set:
+for e in a.edges.values():
     print(e)

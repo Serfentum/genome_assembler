@@ -15,6 +15,10 @@ class Edge:
     def compute_coverage(self):
         self.coverage = self.coverages.mean()
 
+    def add_part(self, vertex):
+        self.source = vertex
+        self.coverages = np.append(self.coverages, self.source.coverage)
+
     def __eq__(self, other):
         return other.__class__ == self.__class__ and self.sequence == other.sequence
 
