@@ -12,6 +12,9 @@ class Graph:
         self.k = k
         self.graph_scheme = {}
         self.edges = {}
+        self.collapsed_graph = {}
+        self.collapsed_edges = {}
+
 
     def plot(self, filename, include_seq=False):
         """
@@ -25,43 +28,86 @@ class Graph:
         # Iterate over vertices and edges, add them to graphviz graph.
         # There will be coverages of vertices, edges and their length and corresponding sequences if include_seq
         if include_seq:
-            for v, out in self.graph_scheme.values():
-                dot.node(v.sequence, label=f'{v.sequence} {v.coverage}')
-            for e in self.edges.values():
-                dot.edge(e.sequence[:-1], e.sequence[1:], label=f'{e.sequence} {self.k + len(e.coverages) - 1} {e.coverage}')
+            for vs, (v, out) in self.graph_scheme.items():
+                dot.node(vs, label=f'{vs} {v.coverage}')
+                for dv in out:
+                    dot.edge(vs, dv, label=f'{self.edges[(vs, dv)].sequence} {self.k + len(self.edges[(vs, dv)].coverages) - 1} {self.edges[(vs, dv)].coverage}')
+            # for (sv, dv), e in self.edges.items():
+            #     dot.edge(sv, dv, label=f'{e.sequence} {self.k + len(e.coverages) - 1} {e.coverage}')
         else:
-            for v, out in self.graph_scheme.values():
-                dot.node(v.sequence, label=f'{v.coverage}')
-            for e in self.edges.values():
-                dot.edge(e.sequence[:-1], e.sequence[1:], label=f'{self.k + len(e.coverages) - 1} {e.coverage}')
+            for vs, (v, out) in self.graph_scheme.items():
+                dot.node(vs, label=f'{v.coverage}')
+                for dv in out:
+                    dot.edge(vs, dv, label=f'{self.k + len(self.edges[(vs, dv)].coverages) - 1} {self.edges[(vs, dv)].coverage}')
+
+            # for (sv, dv), e in self.edges.items():
+            #     dot.edge(sv, dv, label=f'{self.k + len(e.coverages) - 1} {e.coverage}')
         # Save pdf
         dot.render(filename, view=True)
 
-    # def collapse(self):
-    #     # If 1st vertex have 1 out degree and 2nd have 1 in degree
-    #     # Add new links in graph
-    #     # Delete adjacent intermediate vertex and replace links between vertex, it and next vertices, replace edges
-    #     for vertex, adjacents in self.graph_scheme.values():
-    #         if vertex.out_degree == 1 and self.graph_scheme[adjacents[0]][0].in_degree == 1:
-    #             neighbour = adjacents[0]
-    #             # Clear adjacency list
-    #             first_vertex = self.graph_scheme[vertex.sequence]
-    #             first_vertex[1].clear()
-    #             # self.edge_set.discard(Edge(vertex, self.graph_scheme[adjacents[0]][0]))
-    #             # Add new links and modify edges in set
-    #             # print(neighbour)
-    #             # print(self.graph_scheme[neighbour])
-    #             for next_vertex in self.graph_scheme[neighbour]:
-    #                 # print(first_vertex)
-    #                 # print(type(first_vertex))
-    #                 # print(first_vertex[1])
-    #                 # print(self.graph_scheme[neighbour])
-    #                 first_vertex[1].append(next_vertex[0])
-    #                 for edge in self.edge_set:
-    #                     if edge.source == vertex and edge.dest == self.graph_scheme[adjacents[0]][0]:
-    #                         self.edge_set.discard(edge)
-    #                     elif edge.source == self.graph_scheme[adjacents[0]][0] and edge.dest == next_vertex[0]:
-    #                         edge.add_part(vertex)
+    def collapse(self):
+
+        obsolete = set()
+
+        # Iterate over vertices in current graph
+        for source_seq, (source, adj_vertex) in self.graph_scheme.items():
+            # If source vertex was marked as deleted, skip it
+            if source_seq in obsolete:
+                continue
+            # If source vertex is a leaf or internal vertex doesn't have 1 in and 1 out edges - add them to new graph
+            # and continue
+            try:
+                inter = self.graph_scheme[adj_vertex[0]][0]
+            except:
+                self.add_unchanged(source)
+                obsolete.add(source)
+                continue
+            if inter.in_degree != 1 and inter.out_degree != 1:
+                self.add_unchanged(source, inter)
+                obsolete.add(source)
+                continue
+
+            # List of all 3rd layer vertices, adjacent to inter vertex
+            dests = [self.graph_scheme[dest][0] for dest in self.graph_scheme[inter.sequence][1]]
+            # Add new links and edges in collapsed graph
+            for dest in dests:
+                self.extend_one_edge(source, inter, dest)
+
+            obsolete.add(source)
+
+
+
+    def extend_one_edge(self, source, inter, dest):
+        # Add source vertex to collapsed graph
+        if source not in self.collapsed_graph:
+            self.collapsed_graph[source.sequence] = source, []
+        # Add link between 1st and 3rd vertices
+        self.collapsed_graph[source.sequence][1].append(dest.sequence)
+        # Add edge to collapsed edges
+        self.modify_edge(source, inter, dest)
+
+    def modify_edge(self, source, inter, dest):
+        """
+        Assign edge between source and dest vertices in collapsed graph, update edge's sequence, coverages and dest
+        :param source: Vertex - 1st layer vertex
+        :param inter: Vertex - 2nd layer vertex, next to source
+        :param dest: Vertex - 3rd layer vertex, next to inter
+        :return:
+        """
+        self.collapsed_edges[(source.sequence, dest.sequence)] = self.edges[(source.sequence, inter.sequence)]
+        self.collapsed_edges[(source.sequence, dest.sequence)].extend(self.edges[(inter.sequence, dest.sequence)])
+
+    def add_unchanged(self, source, inter=None):
+        """
+        Add source vertex or source vertex with inter and their edge into new graph intact
+        :param source: Vertex - first vertex
+        :param inter: Vertex - second vertex
+        :return:
+        """
+        self.collapsed_graph[source.sequence] = self.graph_scheme[source.sequence]
+        if inter is not None:
+            self.collapsed_graph[inter.sequence] = self.graph_scheme[inter.sequence]
+            self.collapsed_edges[(source.sequence, inter.sequence)] = self.edges[(source.sequence, inter.sequence)]
 
 
 
@@ -78,7 +124,7 @@ class Graph:
         # Get all sequential kmers from read
         kmers = [read[i:i + self.k] for i in range(len(read) - self.k + 1)]
 
-        # Iterate over adjacent kmers
+        # Iterate over adjacent kmers, add them into graph dict as vertices, add edges between them in the edge graph
         for source, destination in zip(kmers, kmers[1:]):
             # Possible cases:
             # All vertices are present - increase their coverage, increase vertex degrees if there wasn't such edge and
@@ -117,18 +163,15 @@ class Graph:
             self.edges[(source, destination)] = Edge(self.graph_scheme[source][0], self.graph_scheme[destination][0])
 
     def cover_edges(self):
+        # Write information about node coverage into edges
         for edge in self.edges.values():
             edge.ini_cover()
 
     def edge_coverage(self):
+        # Compute coverage of edges
         for edge in self.edges.values():
             edge.compute_coverage()
 
-    # TODO kmer all reads and create from them vertices and edges
-    # TODO link adjacent kmers in reads
-    # TODO run over edges, count initial coverage
-    # TODO
-    # TODO
 
 a = Graph('../test4', 3)
 
@@ -138,13 +181,23 @@ a = Graph('../test4', 3)
 # compute edge coverage
 # plot graph
 a.fragmentate()
-print(a.graph_scheme)
 a.cover_edges()
 
-# a.collapse()
+print('Graph:')
+print(a.graph_scheme)
+print('Edges:')
+print(a.edges)
+
 a.edge_coverage()
 
-a.plot('fd', True)
+
+a.plot('test', True)
+a.collapse()
+a.graph_scheme = a.collapsed_graph
+a.edges = a.collapsed_edges
+print(a.collapsed_graph)
+print(a.edges)
+a.plot('test_collapsed', True)
 
 
 for v in a.graph_scheme.values():
