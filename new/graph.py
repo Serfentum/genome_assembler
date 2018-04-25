@@ -58,22 +58,30 @@ class Graph:
             # and continue
             try:
                 inter = self.graph_scheme[adj_vertex[0]][0]
+                if inter.sequence in obsolete:
+                    continue
             except:
                 self.add_unchanged(source)
-                obsolete.add(source)
+                # obsolete.add(source)
                 continue
             if inter.in_degree != 1 and inter.out_degree != 1:
                 self.add_unchanged(source, inter)
-                obsolete.add(source)
+                # obsolete.add(source)
                 continue
 
             # List of all 3rd layer vertices, adjacent to inter vertex
             dests = [self.graph_scheme[dest][0] for dest in self.graph_scheme[inter.sequence][1]]
             # Add new links and edges in collapsed graph
             for dest in dests:
+                if dest.sequence in obsolete:
+                    if source not in self.collapsed_graph:
+                        self.collapsed_graph[source.sequence] = source, []
+                    self.collapsed_graph[source.sequence][1].append(inter.sequence)
+                    self.collapsed_edges[(source.sequence, inter.sequence)] = self.edges[(source.sequence, inter.sequence)]
+                    continue
                 self.extend_one_edge(source, inter, dest)
 
-            obsolete.add(source)
+            obsolete.add(inter.sequence)
 
 
 
