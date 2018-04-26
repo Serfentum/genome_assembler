@@ -1,9 +1,19 @@
 from collections import defaultdict
 from Bio import SeqIO
 from graphviz import Digraph
+import logging
+import time
 
 from new.edge import Edge
 from new.vertex import Vertex
+
+
+logging.basicConfig(filename='graph.log',
+                    filemode='w',
+                    format='%(message)s',
+                    level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 
 
 class Graph:
@@ -28,67 +38,94 @@ class Graph:
         # Iterate over vertices and edges, add them to graphviz graph.
         # There will be coverages of vertices, edges and their length and corresponding sequences if include_seq
         if include_seq:
+            print('EDGES')
+            for e in self.edges.values():
+                print(e)
             for vs, (v, out) in self.graph_scheme.items():
                 dot.node(vs, label=f'{vs} {v.coverage}')
                 for dv in out:
                     dot.edge(vs, dv, label=f'{self.edges[(vs, dv)].sequence} {self.k + len(self.edges[(vs, dv)].coverages) - 1} {self.edges[(vs, dv)].coverage}')
-            # for (sv, dv), e in self.edges.items():
-            #     dot.edge(sv, dv, label=f'{e.sequence} {self.k + len(e.coverages) - 1} {e.coverage}')
         else:
             for vs, (v, out) in self.graph_scheme.items():
                 dot.node(vs, label=f'{v.coverage}')
                 for dv in out:
                     dot.edge(vs, dv, label=f'{self.k + len(self.edges[(vs, dv)].coverages) - 1} {self.edges[(vs, dv)].coverage}')
-
-            # for (sv, dv), e in self.edges.items():
-            #     dot.edge(sv, dv, label=f'{self.k + len(e.coverages) - 1} {e.coverage}')
         # Save pdf
         dot.render(filename, view=True)
 
-    def collapse(self):
+    def collapse(self, pause=1):
 
         obsolete = set()
-
+        # i = 1
         # Iterate over vertices in current graph
+        logging.debug('Start collapsing:')
         for source_seq, (source, adj_vertex) in self.graph_scheme.items():
+            logger.debug('%s\n\t%s is a source', obsolete, source.sequence)
             # If source vertex was marked as deleted, skip it
             if source_seq in obsolete:
+                logger.debug('\t%s is in obsolete - skip', source.sequence)
                 continue
             # If source vertex is a leaf or internal vertex doesn't have 1 in and 1 out edges - add them to new graph
             # and continue
-            try:
-                inter = self.graph_scheme[adj_vertex[0]][0]
-                if inter.sequence in obsolete:
-                    continue
-            except:
+            if not adj_vertex:
+                logger.debug('\t%s has no adjacent vertex - add_unchanged', source.sequence)
                 self.add_unchanged(source)
-                # obsolete.add(source)
-                continue
-            if inter.in_degree != 1 and inter.out_degree != 1:
-                self.add_unchanged(source, inter)
-                # obsolete.add(source)
-                continue
 
-            # List of all 3rd layer vertices, adjacent to inter vertex
-            dests = [self.graph_scheme[dest][0] for dest in self.graph_scheme[inter.sequence][1]]
-            # Add new links and edges in collapsed graph
-            for dest in dests:
-                if dest.sequence in obsolete:
-                    if source not in self.collapsed_graph:
-                        self.collapsed_graph[source.sequence] = source, []
-                    self.collapsed_graph[source.sequence][1].append(inter.sequence)
-                    self.collapsed_edges[(source.sequence, inter.sequence)] = self.edges[(source.sequence, inter.sequence)]
+            for inter in adj_vertex:  # inter = self.graph_scheme[adj_vertex[0]][0] # for inter in self.graph_scheme[adj_vertex[0]]
+                logger.debug('\t\tIterate over intermediate vertices')
+                inter = self.graph_scheme[inter][0]
+                if inter.sequence in obsolete:
+                    logger.debug('\t\tInter %s is in obsolete - skip', inter.sequence)
                     continue
-                self.extend_one_edge(source, inter, dest)
 
-            obsolete.add(inter.sequence)
+                if inter.in_degree != 1 or inter.out_degree != 1:
+                    logger.debug('\t\tInter %s degrees are not singular - add_unchanged(%s, %s)', inter.sequence, source.sequence, inter.sequence)
+                    self.add_unchanged(source, inter)
+                    continue
 
+                # List of all 3rd layer vertices, adjacent to inter vertex
+                dests = [self.graph_scheme[dest][0] for dest in self.graph_scheme[inter.sequence][1]]
+                # Add new links and edges in collapsed graph
+                for dest in dests:
+                    logger.debug('\t\t\tSource, Inter, Dest - %s %s %s', source.sequence, inter.sequence, dest.sequence)
+                    if dest.sequence in obsolete:
+                        logger.debug('\t\t\t\t%s is obsolete', dest.sequence)
 
+                        if source not in self.collapsed_graph:
+                            logger.debug('\t\t\t\tAdd source %s', source.sequence)
+                            self.collapsed_graph[source.sequence] = source, []
+                        self.collapsed_graph[source.sequence][1].append(inter.sequence)
+                        logger.debug('\t\t\t\tAdd link from source %s to inter %s', source.sequence, inter.sequence)
+                        self.collapsed_edges[(source.sequence, inter.sequence)] = self.edges[(source.sequence, inter.sequence)]
+                        logger.debug('\t\t\t\tAdd unchanged edge between %s %s', source.sequence, inter.sequence)
+                        # print(f'\tAdd existed edge between {source.sequence} and {inter.sequence}')
+                        continue
+                    logger.debug('\t\t\t\tExtend edge with source, inter, dest %s %s %s', source.sequence, inter.sequence, dest.sequence)
+                    self.extend_one_edge(source, inter, dest)
+                    # print(f'\tAdd edge between {source.sequence} and {dest.sequence}')
+                logger.debug('\t\tAdd %s to obsolete', inter.sequence)
+                obsolete.add(inter.sequence)
+                self.slideshow(pause)
+                # print(f'Discard {inter.sequence}\n')
+
+    def slideshow(self, pause):
+        dot = Digraph(comment='Assembly')
+        for vs, (v, out) in self.collapsed_graph.items():
+            dot.node(vs, label=f'{vs} {v.coverage}')
+            for dv in out:
+                dot.edge(vs, dv, label=f'{self.collapsed_edges[(vs, dv)].sequence} {self.k + len(self.collapsed_edges[(vs, dv)].coverages) - 1} {self.collapsed_edges[(vs, dv)].coverage}')
+        dot.render(view=True)
+        time.sleep(pause)
 
     def extend_one_edge(self, source, inter, dest):
         # Add source vertex to collapsed graph
-        if source not in self.collapsed_graph:
+        if source.sequence not in self.collapsed_graph:
             self.collapsed_graph[source.sequence] = source, []
+        # If inter vertex was in collapsed graph delete it
+        if inter.sequence in self.collapsed_graph:
+            del self.collapsed_graph[inter.sequence]
+            # del self.collapsed_edges[(inter.sequence, dest.sequence)]
+            logger.debug('%s', self.collapsed_graph.keys())
         # Add link between 1st and 3rd vertices
         self.collapsed_graph[source.sequence][1].append(dest.sequence)
         # Add edge to collapsed edges
@@ -112,9 +149,14 @@ class Graph:
         :param inter: Vertex - second vertex
         :return:
         """
-        self.collapsed_graph[source.sequence] = self.graph_scheme[source.sequence]
-        if inter is not None:
-            self.collapsed_graph[inter.sequence] = self.graph_scheme[inter.sequence]
+        if source.sequence not in self.collapsed_graph:
+            self.collapsed_graph[source.sequence] = source, []
+        if inter and inter.sequence not in self.collapsed_graph:
+            self.collapsed_graph[inter.sequence] = inter, []
+
+        if inter:
+            self.collapsed_graph[source.sequence][1].append(inter.sequence)
+            # self.collapsed_graph[inter.sequence] = self.graph_scheme[inter.sequence]
             self.collapsed_edges[(source.sequence, inter.sequence)] = self.edges[(source.sequence, inter.sequence)]
 
 
@@ -182,6 +224,7 @@ class Graph:
 
 
 a = Graph('../test4', 3)
+# a = Graph('../wloop', 3)
 
 # Get graph
 # add coverage of vertices to edges

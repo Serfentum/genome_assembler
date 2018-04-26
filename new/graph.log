@@ -1,0 +1,28 @@
+Start collapsing:
+set()
+	AT is a source
+		Iterate over intermediate vertices
+			Source, Inter, Dest - AT TG GC
+				Extend edge with source, inter, dest AT TG GC
+		Add TG to obsolete
+{'TG'}
+	TG is a source
+	TG is in obsolete - skip
+{'TG'}
+	GC is a source
+		Iterate over intermediate vertices
+			Source, Inter, Dest - GC CC CA
+				Extend edge with source, inter, dest GC CC CA
+		Add CC to obsolete
+{'CC', 'TG'}
+	CC is a source
+	CC is in obsolete - skip
+{'CC', 'TG'}
+	CA is a source
+		Iterate over intermediate vertices
+			Source, Inter, Dest - CA AT TG
+				TG is obsolete
+				Add source CA
+				Add link from source CA to inter AT
+				Add unchanged edge between CA AT
+		Add AT to obsolete

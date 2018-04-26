@@ -1,13 +1,13 @@
 // Assembly
 digraph {
-	ATG [label="ATG 2"]
-	ATG -> TGC [label="ATGC 4 2.5"]
-	TGC [label="TGC 3"]
-	TGC -> GCC [label="TGCC 4 3.0"]
-	GCC [label="GCC 3"]
-	GCC -> CCA [label="GCCA 4 2.5"]
-	CCA [label="CCA 2"]
-	CCA -> CAT [label="CCAT 4 2.0"]
-	CAT [label="CAT 2"]
-	CAT -> ATG [label="CATG 4 2.0"]
+	AT [label="AT 4"]
+	AT -> TG [label="ATG 3 4.5"]
+	TG [label="TG 5"]
+	TG -> GC [label="TGC 3 5.5"]
+	GC [label="GC 6"]
+	GC -> CC [label="GCC 3 5.5"]
+	CC [label="CC 5"]
+	CC -> CA [label="CCA 3 4.5"]
+	CA [label="CA 4"]
+	CA -> AT [label="CAT 3 4.0"]
 }
