@@ -12,7 +12,9 @@ a.edge_coverage()
 
 
 a.plot('ttt', True, False)
+
 a.collapse()
+a.plot('ttr', False)
 # a.graph_scheme = a.collapsed_graph
 # a.edges = a.collapsed_edges
 # print(a.collapsed_graph)
@@ -24,8 +26,8 @@ a.plot('test_collapsed', include_seq=True, collapsed=True)
 # print('Edges:')
 # print(a.edges)
 #
-# for v in a.graph_scheme.values():
-#     print(v[0])
+# for vs, (v, adj) in a.collapsed_graph.items():
+#     print(v, adj, sep='\t')
 # for e in a.edges.values():
 #     print(e)
 

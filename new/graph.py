@@ -35,8 +35,6 @@ class Graph:
         """
         dot = Digraph(comment='Assembly')
 
-        # Iterate over vertices and edges, add them to graphviz graph
-        # There will be coverages of vertices, edges and their length and corresponding sequences if include_seq
         if include_seq:
             dot = self.plot_full(dot, collapsed)
         else:
@@ -62,18 +60,21 @@ class Graph:
         :param collapsed: boolean - whether collapsed graph to plot
         :return: Digraph - fulfilled with nodes and edges
         """
+
         if collapsed:
             graph = self.collapsed_graph.items()
             edges = self.collapsed_edges
         else:
             graph = self.graph_scheme.items()
             edges = self.edges
-        for vs, (v, out) in self.graph_scheme.items():
+        # Iterate over vertices and edges, add them to graphviz graph
+        # There will be coverages of vertices, edges and their length and corresponding sequences if include_seq
+        for vs, (v, out) in graph:
             dot.node(vs, label=f'{v.coverage}')
             for dv in out:
                 dot.edge(vs, dv,
-                         label=f'{self.k + len(self.edges[(vs, dv)].coverages) - 1} '
-                               f'{self.edges[(vs, dv)].coverage}')
+                         label=f'{self.k + len(edges[(vs, dv)].coverages) - 1} '
+                               f'{edges[(vs, dv)].coverage}')
         return dot
 
     def plot_full(self, dot, collapsed=True):
