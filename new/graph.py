@@ -35,6 +35,7 @@ class Graph:
         """
         dot = Digraph(comment='Assembly')
 
+        # Choose function with appropriate labeling according to full or short plot
         if include_seq:
             dot = self.plot_full(dot, collapsed)
         else:
@@ -49,6 +50,8 @@ class Graph:
         :return:
         """
         dot = Digraph(comment='Assembly')
+
+        # Plot graph, display it and wait pause time
         self.plot_full(dot, collapsed)
         dot.render(view=True)
         time.sleep(pause)
@@ -60,15 +63,11 @@ class Graph:
         :param collapsed: boolean - whether collapsed graph to plot
         :return: Digraph - fulfilled with nodes and edges
         """
+        # Choose appropriate graph for plotting - full or collapsed
+        graph, edges = self.solve_graph_type(collapsed)
 
-        if collapsed:
-            graph = self.collapsed_graph.items()
-            edges = self.collapsed_edges
-        else:
-            graph = self.graph_scheme.items()
-            edges = self.edges
         # Iterate over vertices and edges, add them to graphviz graph
-        # There will be coverages of vertices, edges and their length and corresponding sequences if include_seq
+        # There will be coverages of vertices, edges and their length
         for vs, (v, out) in graph:
             dot.node(vs, label=f'{v.coverage}')
             for dv in out:
@@ -84,12 +83,11 @@ class Graph:
         :param collapsed: boolean - whether collapsed graph to plot
         :return: Digraph - fulfilled with nodes and edges
         """
-        if collapsed:
-            graph = self.collapsed_graph.items()
-            edges = self.collapsed_edges
-        else:
-            graph = self.graph_scheme.items()
-            edges = self.edges
+        # Choose appropriate graph for plotting - full or collapsed
+        graph, edges = self.solve_graph_type(collapsed)
+
+        # Iterate over vertices and edges, add them to graphviz graph
+        # There will be coverages of vertices, edges and their length and corresponding sequences
         for vs, (v, out) in graph:
             dot.node(vs, label=f'{vs} {v.coverage}')
             for dv in out:
@@ -98,6 +96,20 @@ class Graph:
                                f'{self.k + len(edges[(vs, dv)].coverages) - 1} '
                                f'{edges[(vs, dv)].coverage}')
         return dot
+
+    def solve_graph_type(self, collapsed):
+        """
+        Choose appropriate graph for plotting - full or collapsed
+        :param collapsed: boolean - whether collapsed graph to plot
+        :return: dict, dict - tuple of appropriate graph and edges dicts
+        """
+        if collapsed:
+            graph = self.collapsed_graph.items()
+            edges = self.collapsed_edges
+        else:
+            graph = self.graph_scheme.items()
+            edges = self.edges
+        return graph, edges
 
     def collapse(self, pause=1):
 
