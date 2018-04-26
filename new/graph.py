@@ -1,19 +1,19 @@
-from collections import defaultdict
-from Bio import SeqIO
 from graphviz import Digraph
 import logging
 import time
-
+from Bio import SeqIO
 from new.edge import Edge
 from new.vertex import Vertex
 
 
+# For logging purpose. It will create file graph.log
+# To turn logging on    - change logging level to DEBUG
+# To turn logging off   - change logging level to something higher e.g. INFO
 logging.basicConfig(filename='graph.log',
-                    filemode='w',
+                    filemode='a',
                     format='%(message)s',
-                    level=logging.DEBUG)
+                    level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 
 class Graph:
@@ -25,38 +25,82 @@ class Graph:
         self.collapsed_graph = {}
         self.collapsed_edges = {}
 
-
-    def plot(self, filename, include_seq=False):
+    def plot(self, filename, include_seq=False, collapsed=True):
         """
         Plot assembly graph
         :param filename: str - path to output
         :param include_seq: boolean - whether to include sequences in vertices and edges
+        :param collapsed: boolean - whether collapsed graph to plot
         :return:
         """
         dot = Digraph(comment='Assembly')
 
-        # Iterate over vertices and edges, add them to graphviz graph.
+        # Iterate over vertices and edges, add them to graphviz graph
         # There will be coverages of vertices, edges and their length and corresponding sequences if include_seq
         if include_seq:
-            print('EDGES')
-            for e in self.edges.values():
-                print(e)
-            for vs, (v, out) in self.graph_scheme.items():
-                dot.node(vs, label=f'{vs} {v.coverage}')
-                for dv in out:
-                    dot.edge(vs, dv, label=f'{self.edges[(vs, dv)].sequence} {self.k + len(self.edges[(vs, dv)].coverages) - 1} {self.edges[(vs, dv)].coverage}')
+            dot = self.plot_full(dot, collapsed)
         else:
-            for vs, (v, out) in self.graph_scheme.items():
-                dot.node(vs, label=f'{v.coverage}')
-                for dv in out:
-                    dot.edge(vs, dv, label=f'{self.k + len(self.edges[(vs, dv)].coverages) - 1} {self.edges[(vs, dv)].coverage}')
+            dot = self.plot_wo_seq(dot, collapsed)
         # Save pdf
         dot.render(filename, view=True)
+
+    def slideshow(self, pause, collapsed):
+        """
+        Plot current state of graph, nice to use in loops to visualize
+        :param pause: float - seconds to display picture
+        :return:
+        """
+        dot = Digraph(comment='Assembly')
+        self.plot_full(dot, collapsed)
+        dot.render(view=True)
+        time.sleep(pause)
+
+    def plot_wo_seq(self, dot, collapsed=True):
+        """
+        Create content of dot file with short graph description without sequence labels
+        :param dot: Digraph - object from graphviz to describe graph
+        :param collapsed: boolean - whether collapsed graph to plot
+        :return: Digraph - fulfilled with nodes and edges
+        """
+        if collapsed:
+            graph = self.collapsed_graph.items()
+            edges = self.collapsed_edges
+        else:
+            graph = self.graph_scheme.items()
+            edges = self.edges
+        for vs, (v, out) in self.graph_scheme.items():
+            dot.node(vs, label=f'{v.coverage}')
+            for dv in out:
+                dot.edge(vs, dv,
+                         label=f'{self.k + len(self.edges[(vs, dv)].coverages) - 1} '
+                               f'{self.edges[(vs, dv)].coverage}')
+        return dot
+
+    def plot_full(self, dot, collapsed=True):
+        """
+        Create content of dot file with full graph description including sequence labels
+        :param dot: Digraph - object from graphviz to describe graph
+        :param collapsed: boolean - whether collapsed graph to plot
+        :return: Digraph - fulfilled with nodes and edges
+        """
+        if collapsed:
+            graph = self.collapsed_graph.items()
+            edges = self.collapsed_edges
+        else:
+            graph = self.graph_scheme.items()
+            edges = self.edges
+        for vs, (v, out) in graph:
+            dot.node(vs, label=f'{vs} {v.coverage}')
+            for dv in out:
+                dot.edge(vs, dv,
+                         label=f'{edges[(vs, dv)].sequence} '
+                               f'{self.k + len(edges[(vs, dv)].coverages) - 1} '
+                               f'{edges[(vs, dv)].coverage}')
+        return dot
 
     def collapse(self, pause=1):
 
         obsolete = set()
-        # i = 1
         # Iterate over vertices in current graph
         logging.debug('Start collapsing:')
         for source_seq, (source, adj_vertex) in self.graph_scheme.items():
@@ -71,7 +115,7 @@ class Graph:
                 logger.debug('\t%s has no adjacent vertex - add_unchanged', source.sequence)
                 self.add_unchanged(source)
 
-            for inter in adj_vertex:  # inter = self.graph_scheme[adj_vertex[0]][0] # for inter in self.graph_scheme[adj_vertex[0]]
+            for inter in adj_vertex:
                 logger.debug('\t\tIterate over intermediate vertices')
                 inter = self.graph_scheme[inter][0]
                 if inter.sequence in obsolete:
@@ -98,24 +142,12 @@ class Graph:
                         logger.debug('\t\t\t\tAdd link from source %s to inter %s', source.sequence, inter.sequence)
                         self.collapsed_edges[(source.sequence, inter.sequence)] = self.edges[(source.sequence, inter.sequence)]
                         logger.debug('\t\t\t\tAdd unchanged edge between %s %s', source.sequence, inter.sequence)
-                        # print(f'\tAdd existed edge between {source.sequence} and {inter.sequence}')
                         continue
                     logger.debug('\t\t\t\tExtend edge with source, inter, dest %s %s %s', source.sequence, inter.sequence, dest.sequence)
                     self.extend_one_edge(source, inter, dest)
-                    # print(f'\tAdd edge between {source.sequence} and {dest.sequence}')
                 logger.debug('\t\tAdd %s to obsolete', inter.sequence)
                 obsolete.add(inter.sequence)
-                self.slideshow(pause)
-                # print(f'Discard {inter.sequence}\n')
-
-    def slideshow(self, pause):
-        dot = Digraph(comment='Assembly')
-        for vs, (v, out) in self.collapsed_graph.items():
-            dot.node(vs, label=f'{vs} {v.coverage}')
-            for dv in out:
-                dot.edge(vs, dv, label=f'{self.collapsed_edges[(vs, dv)].sequence} {self.k + len(self.collapsed_edges[(vs, dv)].coverages) - 1} {self.collapsed_edges[(vs, dv)].coverage}')
-        dot.render(view=True)
-        time.sleep(pause)
+                self.slideshow(pause, True)
 
     def extend_one_edge(self, source, inter, dest):
         # Add source vertex to collapsed graph
@@ -223,36 +255,3 @@ class Graph:
             edge.compute_coverage()
 
 
-a = Graph('../test4', 3)
-# a = Graph('../wloop', 3)
-
-# Get graph
-# add coverage of vertices to edges
-# collapse graph
-# compute edge coverage
-# plot graph
-a.fragmentate()
-a.cover_edges()
-
-print('Graph:')
-print(a.graph_scheme)
-print('Edges:')
-print(a.edges)
-
-a.edge_coverage()
-
-
-a.plot('test', True)
-a.collapse()
-a.graph_scheme = a.collapsed_graph
-a.edges = a.collapsed_edges
-print(a.collapsed_graph)
-print(a.edges)
-a.plot('test_collapsed', True)
-
-
-for v in a.graph_scheme.values():
-    print(v[0])
-
-for e in a.edges.values():
-    print(e)

@@ -1,9 +1,11 @@
 // Assembly
 digraph {
-	AT [label="AT 4"]
-	AT -> GC [label="ATGC 4 4.5"]
-	GC [label="GC 6"]
-	GC -> CA [label="GCCA 4 5.5"]
-	CA [label="CA 4"]
-	CA -> AT [label="CAT 3 4.0"]
+	TGG [label="TGG 3"]
+	TGG -> GAT [label="TGGAT 5 2.5"]
+	TGG -> GCT [label="TGGCT 5 2.5"]
+	GAT [label="GAT 2"]
+	GAT -> TGG [label="GATGG 5 2.0"]
+	GCT [label="GCT 2"]
+	GCT -> CTG [label="GCTG 4 1.5"]
+	CTG [label="CTG 1"]
 }
