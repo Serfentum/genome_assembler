@@ -29,7 +29,7 @@ class Edge:
         :param second_edge: Edge - 2nd edge to the given to form extended edge
         :return:
         """
-        self.coverages = np.append(self.coverages, (second_edge.coverages[-1]))
+        self.coverages = np.append(self.coverages, (second_edge.coverages[1:]))
         self.sequence += second_edge.sequence[-(len(second_edge.coverages) - 1):]
         self.dest = second_edge.dest
 

@@ -10,9 +10,9 @@ from new.vertex import Vertex
 # To turn logging on    - change logging level to DEBUG
 # To turn logging off   - change logging level to something higher e.g. INFO
 logging.basicConfig(filename='graph.log',
-                    filemode='a',
+                    filemode='w',
                     format='%(message)s',
-                    level=logging.INFO)
+                    level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -25,7 +25,7 @@ class Graph:
         self.collapsed_graph = {}
         self.collapsed_edges = {}
 
-    def plot(self, filename, include_seq=False, collapsed=True):
+    def plot(self, filename, include_seq=False, collapsed=True, format='svg'):
         """
         Plot assembly graph
         :param filename: str - path to output
@@ -33,7 +33,7 @@ class Graph:
         :param collapsed: boolean - whether collapsed graph to plot
         :return:
         """
-        dot = Digraph(comment='Assembly')
+        dot = Digraph(comment='Assembly', format=format)
 
         # Choose function with appropriate labeling according to full or short plot
         if include_seq:
@@ -43,13 +43,13 @@ class Graph:
         # Save pdf
         dot.render(filename, view=True)
 
-    def slideshow(self, pause, collapsed):
+    def slideshow(self, pause, collapsed, format='pdf'):
         """
         Plot current state of graph, nice to use in loops to visualize
         :param pause: float - seconds to display picture
         :return:
         """
-        dot = Digraph(comment='Assembly')
+        dot = Digraph(comment='Assembly', format=format)
 
         # Plot graph, display it and wait pause time
         self.plot_full(dot, collapsed)
@@ -111,8 +111,30 @@ class Graph:
             edges = self.edges
         return graph, edges
 
-    def collapse(self, pause=1):
+    def collapse(self):
+        # cycle indeterminate
+        # collapse iteration
+        # reassignments:
+        logger.debug('Collapsing\n')
+        while True:
+            self.collapse_iteration(1)
+            logger.debug('--> Number of vertices in graph is %s', len(self.graph_scheme))
+            if self.graph_scheme == self.collapsed_graph and self.edges == self.collapsed_edges:
+                break
+            self.graph_scheme = self.collapsed_graph
+            self.edges = self.collapsed_edges
+            self.collapsed_graph = {}
+            self.collapsed_edges = {}
+            if len(self.graph_scheme) == 1:
+                break
 
+    def collapse_iteration(self, pause=1.5):
+        """
+        Collapse graph and visualize each step with pause intervals
+        Populate self.collapsed_graph and self.collapsed_edges
+        :param pause: float - time of pauses
+        :return:
+        """
         obsolete = set()
         # Iterate over vertices in current graph
         logging.debug('Start collapsing:')
@@ -163,18 +185,26 @@ class Graph:
                 self.slideshow(pause, True)
 
     def extend_one_edge(self, source, inter, dest):
+        """
+        Extend (source, inter) to (source, dest)
+        :param source:
+        :param inter:
+        :param dest:
+        :return:
+        """
         # Add source vertex to collapsed graph
         if source.sequence not in self.collapsed_graph:
             self.collapsed_graph[source.sequence] = source, []
-        # If inter vertex was in collapsed graph delete it
-        if inter.sequence in self.collapsed_graph:
-            del self.collapsed_graph[inter.sequence]
-            # del self.collapsed_edges[(inter.sequence, dest.sequence)]
-            logger.debug('%s', self.collapsed_graph.keys())
+
         # Add link between 1st and 3rd vertices
         self.collapsed_graph[source.sequence][1].append(dest.sequence)
         # Add edge to collapsed edges
         self.modify_edge(source, inter, dest)
+
+        # If inter vertex was in collapsed graph delete it
+        if inter.sequence in self.collapsed_graph:
+            del self.collapsed_graph[inter.sequence]
+            logger.debug('%s', self.collapsed_graph.keys())
 
     def modify_edge(self, source, inter, dest):
         """
@@ -196,12 +226,10 @@ class Graph:
         """
         if source.sequence not in self.collapsed_graph:
             self.collapsed_graph[source.sequence] = source, []
-        if inter and inter.sequence not in self.collapsed_graph:
-            self.collapsed_graph[inter.sequence] = inter, []
-
         if inter:
+            if inter.sequence not in self.collapsed_graph:
+                self.collapsed_graph[inter.sequence] = inter, []
             self.collapsed_graph[source.sequence][1].append(inter.sequence)
-            # self.collapsed_graph[inter.sequence] = self.graph_scheme[inter.sequence]
             self.collapsed_edges[(source.sequence, inter.sequence)] = self.edges[(source.sequence, inter.sequence)]
 
 
