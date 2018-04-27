@@ -1,39 +1,56 @@
-from new.edge import Edge
-from new.vertex import Vertex
-from new.graph import Graph
+from graph import Graph
 
 
+def launch(filepath, k, include_seq=True, threshold=0.3, format='pdf', output='out', show=False, pause=1.2):
+    """
+    Launch function
+    :return:
+    """
+    # Load file
+    a = Graph(filepath, k)
+
+    # Populate graph
+    a.fragmentate()
+    # Initial edges covering
+    a.cover_edges()
+    a.edge_coverage()
+
+    # Make plot of full graph
+    a.plot(f'{output}_original', include_seq, format)
+
+    # Collapse graph and removing low covered vertices
+    a.collapse(show, pause, format)
+    a.remove_outliers(threshold)
+    # Compute edge coverage
+    a.edge_coverage()
+
+    # Create plot of collapsed graph
+    a.plot(f'{output}collapsed', include_seq, format)
+
+
+
+# Sets
 # a = Graph('../linear', 21)
 # a = Graph('/home/arleg/Downloads/hw3_dataset.fasta', 55)
 # a = Graph('/home/arleg/Downloads/hw3_dataset(1).fasta', 3)
-# a = Graph('../wloop', 3)
-a = Graph('../test4', 3)
-
-a.fragmentate()
-a.cover_edges()
-a.edge_coverage()
+# a = launch('../wloop', 3, show=True, format='svg', pause=0.5)
+a = launch('../test3', 3)
+# a = Graph('/home/arleg/Downloads/s_6_first100000.fastq', 55)
 
 
-a.plot('linear_test2', True, False, format='png')
-
-a.collapse()
+# a.plot('Nastya_test', True, False, format='pdf')
+# a.collapse()
+# a.edge_coverage()
+# a.remove_outliers(0.7)
+# a.plot('Nastya_test_col', True, False, format='pdf')
 # a.plot('linear_test_col', True, False)
-# a.plot('ttr', False, False)
-# a.graph_scheme = a.collapsed_graph
-# a.edges = a.collapsed_edges
-# print(a.collapsed_graph)
-# print(a.edges)
-# a.plot('test_collapsed', include_seq=True, collapsed=False)
 
-# print('Graph:')
-# print(a.graph_scheme)
-# print('Edges:')
-# print(a.edges)
-#
+
 # for vs, (v, adj) in a.collapsed_graph.items():
 #     print(v, adj, sep='\t')
 # for e in a.edges.values():
 #     print(e)
+#     print(e.coverages.mean(), e.coverage)
 
 
 

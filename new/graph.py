@@ -2,8 +2,8 @@ from graphviz import Digraph
 import logging
 import time
 from Bio import SeqIO
-from new.edge import Edge
-from new.vertex import Vertex
+from edge import Edge
+from vertex import Vertex
 
 
 # For logging purpose. It will create file graph.log
@@ -12,7 +12,7 @@ from new.vertex import Vertex
 logging.basicConfig(filename='graph.log',
                     filemode='w',
                     format='%(message)s',
-                    level=logging.DEBUG)
+                    level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -25,12 +25,12 @@ class Graph:
         self.collapsed_graph = {}
         self.collapsed_edges = {}
 
-    def plot(self, filename, include_seq=False, collapsed=True, format='svg'):
+    def plot(self, filename, include_seq, format, collapsed=False):
         """
         Plot assembly graph
         :param filename: str - path to output
         :param include_seq: boolean - whether to include sequences in vertices and edges
-        :param collapsed: boolean - whether collapsed graph to plot
+        :param collapsed: boolean - whether collapsed graph to plot #TODO remove this parameter
         :return:
         """
         dot = Digraph(comment='Assembly', format=format)
@@ -43,7 +43,7 @@ class Graph:
         # Save pdf
         dot.render(filename, view=True)
 
-    def slideshow(self, pause, collapsed, format='pdf'):
+    def slideshow(self, pause, collapsed, format):
         """
         Plot current state of graph, nice to use in loops to visualize
         :param pause: float - seconds to display picture
@@ -56,7 +56,7 @@ class Graph:
         dot.render(view=True)
         time.sleep(pause)
 
-    def plot_wo_seq(self, dot, collapsed=True):
+    def plot_wo_seq(self, dot, collapsed=False):
         """
         Create content of dot file with short graph description without sequence labels
         :param dot: Digraph - object from graphviz to describe graph
@@ -76,7 +76,7 @@ class Graph:
                                f'{edges[(vs, dv)].coverage}')
         return dot
 
-    def plot_full(self, dot, collapsed=True):
+    def plot_full(self, dot, collapsed=False):
         """
         Create content of dot file with full graph description including sequence labels
         :param dot: Digraph - object from graphviz to describe graph
@@ -111,13 +111,13 @@ class Graph:
             edges = self.edges
         return graph, edges
 
-    def collapse(self):
+    def collapse(self, show, pause, format):
         # cycle indeterminate
         # collapse iteration
         # reassignments:
         logger.debug('Collapsing\n')
         while True:
-            self.collapse_iteration(1)
+            self.collapse_iteration(show, pause, format)
             logger.debug('--> Number of vertices in graph is %s', len(self.graph_scheme))
             if self.graph_scheme == self.collapsed_graph and self.edges == self.collapsed_edges:
                 break
@@ -128,7 +128,7 @@ class Graph:
             if len(self.graph_scheme) == 1:
                 break
 
-    def collapse_iteration(self, pause=1.5):
+    def collapse_iteration(self, show, pause, format):
         """
         Collapse graph and visualize each step with pause intervals
         Populate self.collapsed_graph and self.collapsed_edges
@@ -182,7 +182,8 @@ class Graph:
                     self.extend_one_edge(source, inter, dest)
                 logger.debug('\t\tAdd %s to obsolete', inter.sequence)
                 obsolete.add(inter.sequence)
-                self.slideshow(pause, True)
+                if show:
+                    self.slideshow(pause, True, format)
 
     def extend_one_edge(self, source, inter, dest):
         """
@@ -242,6 +243,7 @@ class Graph:
         # Cleave all reads to kmers
         for read in self.reads:
             self.add_read(str(read.seq).upper())
+            self.add_read(str(read.reverse_complement().seq).upper())
 
     def add_read(self, read):
         # Get all sequential kmers from read
@@ -286,13 +288,54 @@ class Graph:
             self.edges[(source, destination)] = Edge(self.graph_scheme[source][0], self.graph_scheme[destination][0])
 
     def cover_edges(self):
-        # Write information about node coverage into edges
+        """
+        Write information about node coverage into edges
+        :return:
+        """
         for edge in self.edges.values():
             edge.ini_cover()
 
     def edge_coverage(self):
-        # Compute coverage of edges
+        """
+        Compute coverage of edges
+        :return:
+        """
         for edge in self.edges.values():
             edge.compute_coverage()
 
+    def remove_outliers(self, threshold):
+        """
+        Remove from graph vertices and edges with low coverage
+        :param threshold: float - all vertices with coverage < threshold * mean(coverage) will be removed
+        :return:
+        """
+        cutoff = threshold * self.mean_coverage()
+        obsolete_vertices = (i[0] for i in (filter(lambda v: getattr(v[0], 'coverage') < cutoff, self.graph_scheme.values())))
+
+        # Delete vertices with low coverage and their edges
+        for v in list(obsolete_vertices):
+            del self.graph_scheme[v.sequence]
+
+            obsolete_edges = [e for e in self.edges if e[0] == v.sequence or e[1] == v.sequence]
+            print(f'Del {v}')
+            for e in obsolete_edges:
+                print(f'Del {e}')
+                del self.edges[e]
+                try:
+                    self.graph_scheme[e[0]][1].remove(v.sequence)
+                    self.graph_scheme[e[1]][1].remove(v.sequence)
+                except:
+                    pass
+
+            print('After cutting')
+            for e in self.edges:
+                print(e)
+
+
+    def mean_coverage(self):
+        """
+        Compute mean vertex coverage
+        :return: float - mean vertex coverage
+        """
+        return sum(getattr(v[0], 'coverage') for v in self.graph_scheme.values()) / len(self.graph_scheme)
 
