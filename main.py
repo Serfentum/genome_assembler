@@ -41,7 +41,7 @@ def launch(filepath, k, include_seq=True, threshold=0.3, format='pdf', output='o
 # a = Graph('../linear', 21)
 # a = Graph('/home/arleg/Downloads/hw3_dataset.fasta', 55)
 # a = Graph('/home/arleg/Downloads/hw3_dataset(1).fasta', 3)
-a = launch('../wloop', 3, show=True, threshold=0.7, format='svg', pause=0.5)
+a = launch('additional_tests/pentangle', 3, show=True, threshold=0.7, format='svg', pause=0.5)
 # a = launch('../test2', 3, threshold=0.7)
 # a = Graph('/home/arleg/Downloads/s_6_first100000.fastq', 55)
 
