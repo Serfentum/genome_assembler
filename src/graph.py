@@ -1,4 +1,6 @@
 from collections import defaultdict
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 from graphviz import Digraph
 from Bio import SeqIO
 import logging
@@ -254,7 +256,7 @@ class Graph:
         # Cleave all reads to kmers
         for read in self.reads:
             self.add_read(str(read.seq).upper())
-            self.add_read(str(read.reverse_complement().seq).upper())
+            # self.add_read(str(read.reverse_complement().seq).upper())
 
     def add_read(self, read):
         """
@@ -338,17 +340,14 @@ class Graph:
             del self.graph_scheme[v.sequence]
             # Select all edges where obsolete vertex present
             obsolete_edges = [e for e in self.edges if e[0] == v.sequence or e[1] == v.sequence]
-            print(obsolete_edges)
             # Delete obsolete edge from edges and delete links in graph
             for e in obsolete_edges:
-                print("here")
                 del self.edges[e]
                 try:
                     self.graph_scheme[e[0]][1].remove(v.sequence)
                     self.graph_scheme[e[1]][1].remove(v.sequence)
                 except:
                     pass
-
 
     def mean_coverage(self):
         """
@@ -357,3 +356,8 @@ class Graph:
         """
         return sum(getattr(v[0], 'coverage') for v in self.graph_scheme.values()) / len(self.graph_scheme)
 
+    def extract(self, output):
+        # Simple variant - dump all edges
+        edges = [SeqRecord(Seq(getattr(e, 'sequence')), description='', id='edge_from_ga')
+                 for edge in self.edges.values() for e in edge]
+        SeqIO.write(edges, f'{output}.fasta', 'fasta')

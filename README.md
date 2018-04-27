@@ -6,6 +6,12 @@ But you still can construct graphs, compute coverages, collapse graph, prune low
 Feel free to advise how to lighten graph structure.
 
 
+## Prerequisites
+1. python3.6 interpretator
+2. biopython
+3. graphviz
+
+
 ## Installation
 To take a copy of our GA you should run this command in terminal
 
@@ -13,10 +19,16 @@ To take a copy of our GA you should run this command in terminal
 
 After this you can make use of GA with main.py as an entry point.
 
-## Prerequisites
-1. python3.6 interpretator
-2. biopython
-3. graphviz
+
+## Stucture
+- src - source code
+    - main - entry point
+    - vertex - Vertex class
+    - edge - Edge class
+    - graph - Graph class
+- examples - you can find awesome pictures and gifs with original and collapsed graph
+    - hw - pictures and dots related to homework files
+- additional_tests - some other tests
 
 
 ## Versioning

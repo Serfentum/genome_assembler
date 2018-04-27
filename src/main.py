@@ -17,31 +17,30 @@ def launch(filepath, k, include_seq=True, threshold=0.3, format='pdf', output='o
     # Load file
     a = Graph(filepath, k)
 
-    # Populate graph
+    # Populate graph and cover edges
     a.fragmentate()
-    # Initial edges covering
     a.cover_edges()
     a.edge_coverage()
 
     # Make plot of full graph
-    a.plot(f'{output}_original', include_seq, format)
+    a.plot(f'../{output}_original', include_seq, format)
 
     # Collapse graph and removing low covered vertices
     a.collapse(show, pause, format)
     a.remove_outliers(threshold)
+
     # Compute edge coverage
     a.edge_coverage()
+    a.extract(output)
 
     # Create plot of collapsed graph
-    a.plot(f'{output}collapsed', include_seq, format)
-    print(a.graph_scheme)
-    print(a.edges)
+    a.plot(f'../{output}collapsed', include_seq, format)
 
 
 
 # Sets
 # a = Graph('../linear', 21)
-launch('/home/arleg/Downloads/hw3_dataset.fasta', 55, show=True, threshold=0.75, format='pdf', pause=1)
+launch('../examples/linear', 21, show=False, threshold=0.75, format='png', pause=0.5)
 # a = Graph('/home/arleg/Downloads/hw3_dataset(1).fasta', 3)
 # a = launch('examples/snp', 3, show=True, threshold=0.1, format='pdf', pause=1)
 # a = launch('../test2', 3, threshold=0.7)
