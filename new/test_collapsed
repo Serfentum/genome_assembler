@@ -1,5 +1,0 @@
-// Assembly
-digraph {
-	ATG [label="ATG 2"]
-	ATG -> ATG [label="ATGCCATG 7 2.5"]
-}

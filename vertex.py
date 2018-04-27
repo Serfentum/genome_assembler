@@ -1,32 +1,18 @@
-from collections import defaultdict
-from edge import Edge
-
-
 class Vertex:
-    # class for kmer vertices in dbgraph
-    # Denotes kmer in a graph
-    # Have
-    # sequence - str
-    # coverage - int
-    # in degree -  dict with Vertex as a key and Edge as value
-    # out degree
-    # Maxima of in and out degrees is a number of letters in alphabet
-    # function to update coverage of vertex
-    def __init__(self, sequence, source=None, coverage=0):
-        """
-        Constructor
-        :param sequence: str - sequence of kmer
-        :param coverage: int - coverage of kmer
-        :param source: Vertex - previous Vertex connected with this via Edge
-        """
+    def __init__(self, sequence):
         self.sequence = sequence
-        self.coverage = coverage
+        self.coverage = 0
+        self.in_degree = 0
+        self.out_degree = 0
 
-        # Perhaps redundant
-        self.in_edges = defaultdict(list)
-        if source:
-            self.in_edges[source].append(Edge(sequence + source.sequence[-1]))
-        self.out_edges = defaultdict(list)
+    def increase_coverage(self, n=1):
+        self.coverage += n
+
+    def increase_in_degree(self):
+        self.in_degree += 1
+
+    def increase_out_degree(self):
+        self.out_degree += 1
 
     def __eq__(self, other):
         return other.__class__ == self.__class__ and self.sequence == other.sequence
@@ -38,4 +24,7 @@ class Vertex:
         return hash(self.sequence)
 
     def __str__(self):
+        return str(self.__dict__)
+
+    def __repr__(self):
         return str(self.__dict__)
