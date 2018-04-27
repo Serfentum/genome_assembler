@@ -3,7 +3,15 @@ from graph import Graph
 
 def launch(filepath, k, include_seq=True, threshold=0.3, format='pdf', output='out', show=False, pause=1.2):
     """
-    Launch function
+    Launch function to create graph representation of assembly, collapse it, remove low covered vertices
+    :param filepath: str - path to fasta file
+    :param k: int - kmer size, recommended to be odd
+    :param include_seq: boolean - whether to display vertex and edge sequences
+    :param threshold: float - coefficient which determines threshold for coverage for vertex removing
+    :param format: str - format of output images - pdf, svg, png
+    :param output: str - file name of output, 'original' and 'collapsed' will be appended to it
+    :param show: boolean - whether to display fiery slide show
+    :param pause: float - pause between each slide
     :return:
     """
     # Load file
@@ -33,8 +41,8 @@ def launch(filepath, k, include_seq=True, threshold=0.3, format='pdf', output='o
 # a = Graph('../linear', 21)
 # a = Graph('/home/arleg/Downloads/hw3_dataset.fasta', 55)
 # a = Graph('/home/arleg/Downloads/hw3_dataset(1).fasta', 3)
-# a = launch('../wloop', 3, show=True, format='svg', pause=0.5)
-a = launch('../test3', 3)
+a = launch('../wloop', 3, show=True, threshold=0.7, format='svg', pause=0.5)
+# a = launch('../test2', 3, threshold=0.7)
 # a = Graph('/home/arleg/Downloads/s_6_first100000.fastq', 55)
 
 

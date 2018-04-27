@@ -30,6 +30,7 @@ class Graph:
         Plot assembly graph
         :param filename: str - path to output
         :param include_seq: boolean - whether to include sequences in vertices and edges
+        :param format: str - format of slides
         :param collapsed: boolean - whether collapsed graph to plot #TODO remove this parameter
         :return:
         """
@@ -47,6 +48,8 @@ class Graph:
         """
         Plot current state of graph, nice to use in loops to visualize
         :param pause: float - seconds to display picture
+        :param format: str - format of slides
+        :param collapsed: boolean #TODO remove obsolete parameter
         :return:
         """
         dot = Digraph(comment='Assembly', format=format)
@@ -112,6 +115,13 @@ class Graph:
         return graph, edges
 
     def collapse(self, show, pause, format):
+        """
+        Collapse graph, after this self.collapsed_graph will be in self.graph_scheme
+        :param show: boolean - whether to visualize each step
+        :param pause: float - time of pauses between slides
+        :param format: str - format of slides
+        :return:
+        """
         # cycle indeterminate
         # collapse iteration
         # reassignments:
@@ -130,9 +140,11 @@ class Graph:
 
     def collapse_iteration(self, show, pause, format):
         """
-        Collapse graph and visualize each step with pause intervals
+        Make 1 collapsing iteration
         Populate self.collapsed_graph and self.collapsed_edges
-        :param pause: float - time of pauses
+        :param show: boolean - whether to visualize each step
+        :param pause: float - time of pauses between slides
+        :param format: str - format of slides
         :return:
         """
         obsolete = set()
@@ -246,6 +258,11 @@ class Graph:
             self.add_read(str(read.reverse_complement().seq).upper())
 
     def add_read(self, read):
+        """
+        Add kmers from read to graph
+        :param read: str - read sequence
+        :return:
+        """
         # Get all sequential kmers from read
         kmers = [read[i:i + self.k] for i in range(len(read) - self.k + 1)]
 
@@ -310,26 +327,23 @@ class Graph:
         :return:
         """
         cutoff = threshold * self.mean_coverage()
+        # Select vertices with coverage less than cutoff
+        # Condition about out degree == 0 should be added if you want to delete just leaves
         obsolete_vertices = (i[0] for i in (filter(lambda v: getattr(v[0], 'coverage') < cutoff, self.graph_scheme.values())))
 
         # Delete vertices with low coverage and their edges
         for v in list(obsolete_vertices):
             del self.graph_scheme[v.sequence]
-
+            # Select all edges where obsolete vertex present
             obsolete_edges = [e for e in self.edges if e[0] == v.sequence or e[1] == v.sequence]
-            print(f'Del {v}')
+            # Delete obsolete edge from edges and delete links in graph
             for e in obsolete_edges:
-                print(f'Del {e}')
                 del self.edges[e]
                 try:
                     self.graph_scheme[e[0]][1].remove(v.sequence)
                     self.graph_scheme[e[1]][1].remove(v.sequence)
                 except:
                     pass
-
-            print('After cutting')
-            for e in self.edges:
-                print(e)
 
 
     def mean_coverage(self):
