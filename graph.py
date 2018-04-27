@@ -1,7 +1,8 @@
+from collections import defaultdict
 from graphviz import Digraph
+from Bio import SeqIO
 import logging
 import time
-from Bio import SeqIO
 from edge import Edge
 from vertex import Vertex
 
@@ -21,9 +22,9 @@ class Graph:
         self.reads = SeqIO.parse(path, 'fasta')
         self.k = k
         self.graph_scheme = {}
-        self.edges = {}
+        self.edges = defaultdict(list)
         self.collapsed_graph = {}
-        self.collapsed_edges = {}
+        self.collapsed_edges = defaultdict(list)
 
     def plot(self, filename, include_seq, format, collapsed=False):
         """
@@ -74,9 +75,8 @@ class Graph:
         for vs, (v, out) in graph:
             dot.node(vs, label=f'{v.coverage}')
             for dv in out:
-                dot.edge(vs, dv,
-                         label=f'{self.k + len(edges[(vs, dv)].coverages) - 1} '
-                               f'{edges[(vs, dv)].coverage}')
+                for e in edges[(vs, dv)]:
+                    dot.edge(vs, dv, label=f'{self.k + len(e.coverages) - 1} {e.coverage}')
         return dot
 
     def plot_full(self, dot, collapsed=False):
@@ -93,11 +93,9 @@ class Graph:
         # There will be coverages of vertices, edges and their length and corresponding sequences
         for vs, (v, out) in graph:
             dot.node(vs, label=f'{vs} {v.coverage}')
-            for dv in out:
-                dot.edge(vs, dv,
-                         label=f'{edges[(vs, dv)].sequence} '
-                               f'{self.k + len(edges[(vs, dv)].coverages) - 1} '
-                               f'{edges[(vs, dv)].coverage}')
+            for dv in set(out):
+                for e in set(edges[(vs, dv)]):
+                    dot.edge(vs, dv, label=f'{e.sequence} {self.k + len(e.coverages) - 1} {e.coverage}')
         return dot
 
     def solve_graph_type(self, collapsed):
@@ -134,7 +132,7 @@ class Graph:
             self.graph_scheme = self.collapsed_graph
             self.edges = self.collapsed_edges
             self.collapsed_graph = {}
-            self.collapsed_edges = {}
+            self.collapsed_edges = defaultdict(list)
             if len(self.graph_scheme) == 1:
                 break
 
@@ -227,8 +225,9 @@ class Graph:
         :param dest: Vertex - 3rd layer vertex, next to inter
         :return:
         """
-        self.collapsed_edges[(source.sequence, dest.sequence)] = self.edges[(source.sequence, inter.sequence)]
-        self.collapsed_edges[(source.sequence, dest.sequence)].extend(self.edges[(inter.sequence, dest.sequence)])
+        e = self.edges[(source.sequence, inter.sequence)][0]
+        self.collapsed_edges[(source.sequence, dest.sequence)].append(e)
+        e.extend(self.edges[(inter.sequence, dest.sequence)][0])
 
     def add_unchanged(self, source, inter=None):
         """
@@ -282,7 +281,7 @@ class Graph:
                     self.graph_scheme[source][1].append(destination)
 
                     edge = Edge(self.graph_scheme[source][0], self.graph_scheme[destination][0])
-                    self.edges[(source, destination)] = edge
+                    self.edges[(source, destination)].append(edge)
                 continue
 
             # Create absent vertex
@@ -302,7 +301,7 @@ class Graph:
             self.graph_scheme[destination][0].increase_coverage()
             # Add link in graph edge to edges set
             self.graph_scheme[source][1].append(destination)
-            self.edges[(source, destination)] = Edge(self.graph_scheme[source][0], self.graph_scheme[destination][0])
+            self.edges[(source, destination)].append(Edge(self.graph_scheme[source][0], self.graph_scheme[destination][0]))
 
     def cover_edges(self):
         """
@@ -310,7 +309,8 @@ class Graph:
         :return:
         """
         for edge in self.edges.values():
-            edge.ini_cover()
+            for e in edge:
+                e.ini_cover()
 
     def edge_coverage(self):
         """
@@ -318,7 +318,8 @@ class Graph:
         :return:
         """
         for edge in self.edges.values():
-            edge.compute_coverage()
+            for e in edge:
+                e.compute_coverage()
 
     def remove_outliers(self, threshold):
         """
@@ -329,13 +330,14 @@ class Graph:
         cutoff = threshold * self.mean_coverage()
         # Select vertices with coverage less than cutoff
         # Condition about out degree == 0 should be added if you want to delete just leaves
+        # Deleting below will be easier in this case
         obsolete_vertices = (i[0] for i in (filter(lambda v: getattr(v[0], 'coverage') < cutoff, self.graph_scheme.values())))
 
         # Delete vertices with low coverage and their edges
         for v in list(obsolete_vertices):
             del self.graph_scheme[v.sequence]
             # Select all edges where obsolete vertex present
-            obsolete_edges = [e for e in self.edges if e[0] == v.sequence or e[1] == v.sequence]
+            obsolete_edges = [e for ed in self.edges for e in ed if e[0] == v.sequence or e[1] == v.sequence]
             # Delete obsolete edge from edges and delete links in graph
             for e in obsolete_edges:
                 del self.edges[e]

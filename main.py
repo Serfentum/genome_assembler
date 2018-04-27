@@ -28,12 +28,14 @@ def launch(filepath, k, include_seq=True, threshold=0.3, format='pdf', output='o
 
     # Collapse graph and removing low covered vertices
     a.collapse(show, pause, format)
-    a.remove_outliers(threshold)
+    # a.remove_outliers(threshold)
     # Compute edge coverage
     a.edge_coverage()
 
     # Create plot of collapsed graph
     a.plot(f'{output}collapsed', include_seq, format)
+    print(a.graph_scheme)
+    print(a.edges)
 
 
 
@@ -41,7 +43,7 @@ def launch(filepath, k, include_seq=True, threshold=0.3, format='pdf', output='o
 # a = Graph('../linear', 21)
 # a = Graph('/home/arleg/Downloads/hw3_dataset.fasta', 55)
 # a = Graph('/home/arleg/Downloads/hw3_dataset(1).fasta', 3)
-a = launch('additional_tests/pentangle', 3, show=True, threshold=0.7, format='svg', pause=0.5)
+a = launch('examples/circle', 3, show=True, threshold=0.7, format='svg', pause=0.7)
 # a = launch('../test2', 3, threshold=0.7)
 # a = Graph('/home/arleg/Downloads/s_6_first100000.fastq', 55)
 
