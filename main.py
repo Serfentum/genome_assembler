@@ -28,7 +28,7 @@ def launch(filepath, k, include_seq=True, threshold=0.3, format='pdf', output='o
 
     # Collapse graph and removing low covered vertices
     a.collapse(show, pause, format)
-    # a.remove_outliers(threshold)
+    a.remove_outliers(threshold)
     # Compute edge coverage
     a.edge_coverage()
 
@@ -41,9 +41,9 @@ def launch(filepath, k, include_seq=True, threshold=0.3, format='pdf', output='o
 
 # Sets
 # a = Graph('../linear', 21)
-# a = Graph('/home/arleg/Downloads/hw3_dataset.fasta', 55)
+launch('/home/arleg/Downloads/hw3_dataset.fasta', 55, show=True, threshold=0.75, format='pdf', pause=1)
 # a = Graph('/home/arleg/Downloads/hw3_dataset(1).fasta', 3)
-a = launch('examples/circle', 3, show=True, threshold=0.7, format='svg', pause=0.7)
+# a = launch('examples/snp', 3, show=True, threshold=0.1, format='pdf', pause=1)
 # a = launch('../test2', 3, threshold=0.7)
 # a = Graph('/home/arleg/Downloads/s_6_first100000.fastq', 55)
 

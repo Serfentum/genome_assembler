@@ -337,9 +337,11 @@ class Graph:
         for v in list(obsolete_vertices):
             del self.graph_scheme[v.sequence]
             # Select all edges where obsolete vertex present
-            obsolete_edges = [e for ed in self.edges for e in ed if e[0] == v.sequence or e[1] == v.sequence]
+            obsolete_edges = [e for e in self.edges if e[0] == v.sequence or e[1] == v.sequence]
+            print(obsolete_edges)
             # Delete obsolete edge from edges and delete links in graph
             for e in obsolete_edges:
+                print("here")
                 del self.edges[e]
                 try:
                     self.graph_scheme[e[0]][1].remove(v.sequence)
