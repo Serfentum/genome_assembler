@@ -1,4 +1,5 @@
 from graph import Graph
+from plots import plot
 from animator import animate
 
 
@@ -42,7 +43,7 @@ def launch(filepath,
 
     # Create plot of collapsed graph if it wasn't created
     if not fix_steps:
-        a.plot(f'{output}/picts/collapsed', include_seq, format, show)
+        plot(a, f'{output}/picts/collapsed', include_seq, format, show)
 
     # Create animation from obtained images
     if make_gif:
@@ -59,15 +60,15 @@ def launch(filepath,
 # a = Graph('/home/arleg/Downloads/s_6_first100000.fastq', 55)
 
 
-launch('/home/arleg/Downloads/s_6_first100000.fastq',
+launch('/home/arleg/genome_assembler/examples/hw/hw3_dataset.fasta',
            k=55,
            include_seq=True,
            threshold=0.3,
-           format='pdf',
-           output='/home/arleg/genome_assembler/Nastya',
+           format='png',
+           output='/home/arleg/genome_assembler/examples/hw/1read',
            show=False,
-           pause=0.7,
-           fix_steps=False,
-           make_gif=False)
+           pause=0.3,
+           fix_steps=True,
+           make_gif=True)
 
 

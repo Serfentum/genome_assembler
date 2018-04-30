@@ -2,11 +2,10 @@ from collections import defaultdict
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from graphviz import Digraph
 import logging
-import time
 from edge import Edge
 from vertex import Vertex
+from plots import slideshow
 
 
 # For logging purpose. It will create file graph.log
@@ -29,77 +28,6 @@ class Graph:
         self.edges = defaultdict(list)
         self.collapsed_graph = {}
         self.collapsed_edges = defaultdict(list)
-
-    def plot(self, filename, include_seq, format, show):
-        """
-        Plot assembly graph
-        :param filename: str - path to output
-        :param include_seq: boolean - whether to include sequences in vertices and edges
-        :param format: str - format of slides
-        :return:
-        """
-        dot = Digraph(comment='Assembly', format=format)
-        dot.graph_attr.update(size='7.75,10.25!', ratio='fill')
-
-        # Choose function with appropriate labeling according to full or short plot
-        if include_seq:
-            dot = self.plot_full(dot)
-        else:
-            dot = self.plot_wo_seq(dot)
-        # Save pdf and perhaps show it
-        if show:
-            dot.render(filename, view=True)
-        else:
-            dot.render(filename)
-
-    def slideshow(self, pause, format, show, output):
-        """
-        Plot current state of graph, nice to use in loops to visualize
-        :param pause: float - seconds to display picture
-        :param format: str - format of slides
-        :return:
-        """
-        dot = Digraph(comment='Assembly', format=format)
-        dot.graph_attr.update(size='7.75,10.25!', ratio='fill')
-
-        # Plot graph, display it and wait pause time if should
-        self.plot_full(dot)
-        if show:
-            dot.render(f'{output}/picts/{time.time()}', view=True)
-            time.sleep(pause)
-        else:
-            dot.render(f'{output}/picts/{time.time()}')
-
-
-    def plot_wo_seq(self, dot):
-        """
-        Create content of dot file with short graph description without sequence labels
-        :param dot: Digraph - object from graphviz to describe graph
-        :return: Digraph - fulfilled with nodes and edges
-        """
-        # Iterate over vertices and edges, add them to graphviz graph
-        # There will be coverages of vertices, edges and their length
-        for vs, (v, out) in self.graph.items():
-            dot.node(vs, label=f'{v.coverage}')
-            for dv in out:
-                for e in self.edges[(vs, dv)]:
-                    dot.edge(vs, dv, label=f'{self.k + len(e.coverages) - 1} {e.coverage}')
-        return dot
-
-    def plot_full(self, dot):
-        """
-        Create content of dot file with full graph description including sequence labels
-        :param dot: Digraph - object from graphviz to describe graph
-        :return: Digraph - fulfilled with nodes and edges
-        """
-        # Iterate over vertices and edges, add them to graphviz graph
-        # There will be coverages of vertices, edges and their length and corresponding sequences
-        for vs, (v, out) in self.graph_scheme.items():
-            dot.node(vs, label=f'{vs} {v.coverage}')
-            for dv in set(out):
-                for e in set(self.edges[(vs, dv)]):
-                    dot.edge(vs, dv, label=f'{e.sequence} {self.k + e.parts - 1} {e.coverage}')
-        return dot
 
     def collapse_filter(self, threshold, fix_steps, show, pause, format, output):
         """
@@ -136,7 +64,7 @@ class Graph:
         logging.debug('Collapsable vertex are:\n%s', collapsable)
         # Display uncollapsed graph
         if fix_steps:
-            self.slideshow(pause=pause, format=format, show=show, output=output)
+            slideshow(self, pause=pause, format=format, show=show, output=output)
 
         # Iterate over collapsed vertices
         # reassign edges from previous vertices to next in self.edges and self.graph_scheme
@@ -147,7 +75,7 @@ class Graph:
         if fix_steps:
             for collapsing in collapsable:
                 self.collapse_vertex(collapsing)
-                self.slideshow(pause=pause, format=format, show=show, output=output)
+                slideshow(self, pause=pause, format=format, show=show, output=output)
         else:
             for collapsing in collapsable:
                 self.collapse_vertex(collapsing)
@@ -272,7 +200,8 @@ class Graph:
             self.graph_scheme[destination][0].increase_coverage()
             # Add link in graph edge to edges set
             self.graph_scheme[source][1].append(destination)
-            self.edges[(source, destination)].append(Edge(self.graph_scheme[source][0], self.graph_scheme[destination][0]))
+            self.edges[(source, destination)].append(Edge(self.graph_scheme[source][0],
+                                                          self.graph_scheme[destination][0]))
 
     def cover_edges(self):
         """
