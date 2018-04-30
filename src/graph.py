@@ -140,6 +140,7 @@ class Graph:
         # delete collapsed from self.edges and self.graph_scheme
         logging.debug('Start collapsing:')
         for collapsing in collapsable:
+            # print(collapsing, sep='\t')
             # Relink vertices in graph_scheme
             self.graph_scheme[collapsing.ins[0]][1].remove(collapsing.sequence)
             self.graph_scheme[collapsing.ins[0]][1].append(collapsing.outs[0])
@@ -147,7 +148,8 @@ class Graph:
             # Vertex in and out neighbours update
             self.graph_scheme[collapsing.ins[0]][0].outs.remove(collapsing.sequence)
             self.graph_scheme[collapsing.ins[0]][0].outs.append(collapsing.outs[0])
-            self.graph_scheme[collapsing.outs[0]][0].ins = [collapsing.ins[0]]
+            self.graph_scheme[collapsing.outs[0]][0].ins.remove(collapsing.sequence)
+            self.graph_scheme[collapsing.outs[0]][0].ins.append(collapsing.ins[0])
 
             # Edge update
             first_edge = self.edges[(collapsing.ins[0], collapsing.sequence)][0]
@@ -313,35 +315,43 @@ class Graph:
         # Select vertices with coverage less than cutoff
         # Condition about out degree == 0 should be added if you want to delete just leaves
         # Deleting below will be easier in this case
-        obsolete_vertices = (i[0] for i in (filter(lambda v: getattr(v[0], 'coverage') < cutoff, self.graph_scheme.values())))
-        obsolete_edges = set()
+        obsolete_vertices = list(inter[0] for inter
+                             in (filter(lambda vertex: getattr(vertex[0], 'coverage') < cutoff,
+                                        self.graph_scheme.values())))
+        # obsolete_edges = set()
         # Delete vertices with low coverage and their edges
-        for v in list(obsolete_vertices):
-            for previous in self.graph_scheme[v.sequence][0].ins:
-                self.graph_scheme[previous][0].outs.remove(v.sequence)
-                self.graph_scheme[previous][1].remove(v.sequence)
-                obsolete_edges.update(self.edges[(previous, v.sequence)])
-            for following in self.graph_scheme[v.sequence][0].outs:
-                try:
-                    self.graph_scheme[following][0].ins.remove(v.sequence)
-                    obsolete_edges.update(self.edges[(v.sequence, following)])
-                except:
-                    pass
-                # self.graph_scheme[following][1].remove(v.sequence)
+        # Delete links in graph
+        # Update adjacent vertex in and out degrees
+        for vertex in list(obsolete_vertices):
+            for previous in vertex.ins:
+                self.graph_scheme[previous][0].outs.remove(vertex.sequence)
+                self.graph_scheme[previous][1].remove(vertex.sequence)
+                self.graph_scheme[previous][0].out_degree -= 1
+                # obsolete_edges.add()
+                del self.edges[(previous, vertex.sequence)]
+            # print(obsolete_edges)
+            for following in vertex.outs:
+                # try:
+                self.graph_scheme[following][0].ins.remove(vertex.sequence)
+                self.graph_scheme[following][0].in_degree -= 1
+                # obsolete_edges.add((vertex.sequence, following))
+                del self.edges[(vertex.sequence, following)]
+                # except:
+                #     pass
+                # self.graph_scheme[following][1].remove(vertex.sequence)
 
-
-            del self.graph_scheme[v.sequence]
+            del self.graph_scheme[vertex.sequence]
 
             # Select all edges where obsolete vertex present
             # obsolete_edges = [e for e in self.edges if e[0] == v.sequence or e[1] == v.sequence]
             # Delete obsolete edge from edges and delete links in graph
-            for e in obsolete_edges:
-                try:
-                    self.graph_scheme[e[0]][1].remove(v.sequence)
-                    self.graph_scheme[e[1]][1].remove(v.sequence)
-                    del self.edges[e]
-                except:
-                    pass
+            # for edge in obsolete_edges:
+                # try:
+
+                    # self.graph_scheme[edge[0]][1].remove(vertex.sequence)
+                    # self.graph_scheme[edge[1]][1].remove(vertex.sequence)
+                # except:
+                #     pass
 
     def mean_coverage(self):
         """
