@@ -1,7 +1,8 @@
 from graph import Graph
+import time
 
 
-def launch(filepath, k, include_seq=True, threshold=0.3, format='pdf', output='out', show=False, pause=1.2):
+def launch(filepath, k, include_seq=True, threshold=0.3, format='pdf', output='out', show=False, pause=1.2, fix_steps=False):
     """
     Launch function to create graph representation of assembly, collapse it, remove low covered vertices
     :param filepath: str - path to fasta file
@@ -12,6 +13,7 @@ def launch(filepath, k, include_seq=True, threshold=0.3, format='pdf', output='o
     :param output: str - file name of output, 'original' and 'collapsed' will be appended to it
     :param show: boolean - whether to display fiery slide show
     :param pause: float - pause between each slide
+    :param fix_steps: boolean - whether to create image of graph state at every stage
     :return:
     """
     # Load file
@@ -22,48 +24,28 @@ def launch(filepath, k, include_seq=True, threshold=0.3, format='pdf', output='o
     a.cover_edges()
     a.edge_coverage()
 
-    # Make plot of full graph
-    # a.plot(f'{output}/original', include_seq, format)
-
-    # Collapse graph and removing low covered vertices
-    print(len(a.graph_scheme))
-    for i in range(3):
-        a.collapse(show, pause, format)
-        a.remove_outliers(threshold)
-        print(len(a.graph_scheme))
-        print(len(list(filter(lambda vertex: vertex.in_degree == 1 and vertex.out_degree == 1, (x[0] for x in a.graph_scheme.values())))))
+    # Collapse graph and remove low covered vertices
+    a.collapse_filter(threshold, fix_steps=fix_steps, show=show, pause=pause, format=format, output=output)
 
     # Compute edge coverage
     a.edge_coverage()
-    a.extract(f'{output}/fasta')
+    a.extract(f'{output}/out')
 
-    # Create plot of collapsed graph
-    a.plot(f'{output}/collapsed', include_seq, format)
+    # Create plot of collapsed graph if it wasn't created
+    if not fix_steps:
+        a.plot(f'{output}/picts/{time.time()}', include_seq, format, show)
 
 
 
 # Sets
-# launch('../examples/linear', 21, show=False)
+launch('../examples/snp', 3, fix_steps=False, show=False, threshold=0.5, output='etrbfv', format='png')
 # launch('../examples/linear', 21, threshold=0.5, show=True, format='pdf', pause=0.4, output='/home/arleg/genome_assembler/out')
-launch('/home/arleg/Downloads/hw3_dataset(1).fasta', 55, show=False, output='/home/arleg/genome_assembler/test/out/05', threshold=0.5)
+# launch('/home/arleg/Downloads/hw3_dataset(1).fasta', 55, show=False, output='/home/arleg/genome_assembler/test/out/05', threshold=0.5)
 # a = launch('examples/snp', 3, show=True, threshold=0.1, format='pdf', pause=1)
 # launch('../additional_tests/test3', 3, threshold=0.7, output='/home/arleg/genome_assembler/test/out', show=True)
 # a = Graph('/home/arleg/Downloads/s_6_first100000.fastq', 55)
 
 
-# a.plot('Nastya_test', True, False, format='pdf')
-# a.collapse()
-# a.edge_coverage()
-# a.remove_outliers(0.7)
-# a.plot('Nastya_test_col', True, False, format='pdf')
-# a.plot('linear_test_col', True, False)
-
-
-# for vs, (v, adj) in a.collapsed_graph.items():
-#     print(v, adj, sep='\t')
-# for e in a.edges.values():
-#     print(e)
-#     print(e.coverages.mean(), e.coverage)
 
 
 
