@@ -5,7 +5,6 @@ from Bio.SeqRecord import SeqRecord
 from graphviz import Digraph
 import logging
 import time
-import imageio
 from edge import Edge
 from vertex import Vertex
 
@@ -40,6 +39,7 @@ class Graph:
         :return:
         """
         dot = Digraph(comment='Assembly', format=format)
+        dot.graph_attr.update(size='7.75,10.25!', ratio='fill')
 
         # Choose function with appropriate labeling according to full or short plot
         if include_seq:
@@ -60,6 +60,7 @@ class Graph:
         :return:
         """
         dot = Digraph(comment='Assembly', format=format)
+        dot.graph_attr.update(size='7.75,10.25!', ratio='fill')
 
         # Plot graph, display it and wait pause time if should
         self.plot_full(dot)
@@ -143,10 +144,13 @@ class Graph:
         # delete collapsed from self.edges and self.graph_scheme
         # Show state of graph
         logging.debug('Start collapsing:')
-        for collapsing in collapsable:
-            self.collapse_vertex(collapsing)
-            if fix_steps:
+        if fix_steps:
+            for collapsing in collapsable:
+                self.collapse_vertex(collapsing)
                 self.slideshow(pause=pause, format=format, show=show, output=output)
+        else:
+            for collapsing in collapsable:
+                self.collapse_vertex(collapsing)
 
     def collapse_vertex(self, collapsing):
         """

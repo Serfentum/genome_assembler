@@ -1,8 +1,17 @@
 from graph import Graph
-import time
+from animator import animate
 
 
-def launch(filepath, k, include_seq=True, threshold=0.3, format='pdf', output='out', show=False, pause=1.2, fix_steps=False):
+def launch(filepath,
+           k=55,
+           include_seq=True,
+           threshold=0.3,
+           format='pdf',
+           output='out',
+           show=False,
+           pause=1.2,
+           fix_steps=False,
+           make_gif=False):
     """
     Launch function to create graph representation of assembly, collapse it, remove low covered vertices
     :param filepath: str - path to fasta file
@@ -33,12 +42,16 @@ def launch(filepath, k, include_seq=True, threshold=0.3, format='pdf', output='o
 
     # Create plot of collapsed graph if it wasn't created
     if not fix_steps:
-        a.plot(f'{output}/picts/{time.time()}', include_seq, format, show)
+        a.plot(f'{output}/picts/collapsed', include_seq, format, show)
+
+    # Create animation from obtained images
+    if make_gif:
+        animate(f'{output}/picts', format, pause)
 
 
 
 # Sets
-launch('../examples/snp', 3, fix_steps=False, show=False, threshold=0.5, output='etrbfv', format='png')
+# launch('../examples/variation', 3, fix_steps=True, show=True, threshold=0.5, output='var', format='png', make_gif=True)
 # launch('../examples/linear', 21, threshold=0.5, show=True, format='pdf', pause=0.4, output='/home/arleg/genome_assembler/out')
 # launch('/home/arleg/Downloads/hw3_dataset(1).fasta', 55, show=False, output='/home/arleg/genome_assembler/test/out/05', threshold=0.5)
 # a = launch('examples/snp', 3, show=True, threshold=0.1, format='pdf', pause=1)
@@ -46,6 +59,15 @@ launch('../examples/snp', 3, fix_steps=False, show=False, threshold=0.5, output=
 # a = Graph('/home/arleg/Downloads/s_6_first100000.fastq', 55)
 
 
-
+launch('/home/arleg/Downloads/s_6_first100000.fastq',
+           k=55,
+           include_seq=True,
+           threshold=0.3,
+           format='pdf',
+           output='/home/arleg/genome_assembler/Nastya',
+           show=False,
+           pause=0.7,
+           fix_steps=False,
+           make_gif=False)
 
 
