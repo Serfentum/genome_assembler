@@ -1,10 +1,11 @@
 from collections import defaultdict
+from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from graphviz import Digraph
-from Bio import SeqIO
 import logging
 import time
+import imageio
 from edge import Edge
 from vertex import Vertex
 
@@ -23,7 +24,9 @@ class Graph:
     def __init__(self, path, k):
         self.reads = SeqIO.parse(path, 'fasta')
         self.k = k
+        Edge.k = k
         self.graph_scheme = {}
+        self.vertices = set()
         self.edges = defaultdict(list)
         self.collapsed_graph = {}
         self.collapsed_edges = defaultdict(list)
@@ -97,7 +100,7 @@ class Graph:
             dot.node(vs, label=f'{vs} {v.coverage}')
             for dv in set(out):
                 for e in set(edges[(vs, dv)]):
-                    dot.edge(vs, dv, label=f'{e.sequence} {self.k + len(e.coverages) - 1} {e.coverage}')
+                    dot.edge(vs, dv, label=f'{e.sequence} {self.k + e.parts - 1} {e.coverage}')
         return dot
 
     def solve_graph_type(self, collapsed):
@@ -125,77 +128,41 @@ class Graph:
         # cycle indeterminate
         # collapse iteration
         # reassignments:
-        logger.debug('Collapsing\n')
-        while True:
-            self.collapse_iteration(show, pause, format)
-            logger.debug('--> Number of vertices in graph is %s', len(self.graph_scheme))
-            if self.graph_scheme == self.collapsed_graph and self.edges == self.collapsed_edges:
-                break
-            self.graph_scheme = self.collapsed_graph
-            self.edges = self.collapsed_edges
-            self.collapsed_graph = {}
-            self.collapsed_edges = defaultdict(list)
-            if len(self.graph_scheme) == 1:
-                break
+        # Find all collapsable vertices i.e. those which has in and out degrees equal to 1
+        collapsable = list(filter(lambda vertex: vertex.in_degree == 1 and vertex.out_degree == 1, (x[0] for x in self.graph_scheme.values())))
+        # Display uncollapsed graph
+        if show:
+            self.slideshow(pause, False, format)
 
-    def collapse_iteration(self, show, pause, format):
-        """
-        Make 1 collapsing iteration
-        Populate self.collapsed_graph and self.collapsed_edges
-        :param show: boolean - whether to visualize each step
-        :param pause: float - time of pauses between slides
-        :param format: str - format of slides
-        :return:
-        """
-        obsolete = set()
-        # Iterate over vertices in current graph
+        # Iterate over collapsed vertices
+        # reassign edges from previous vertices to next in self.edges and self.graph_scheme
+        # update in and out vertices in vertices from both sides
+        # delete collapsed from self.edges and self.graph_scheme
         logging.debug('Start collapsing:')
-        for source_seq, (source, adj_vertex) in self.graph_scheme.items():
-            logger.debug('%s\n\t%s is a source', obsolete, source.sequence)
-            # If source vertex was marked as deleted, skip it
-            if source_seq in obsolete:
-                logger.debug('\t%s is in obsolete - skip', source.sequence)
-                continue
-            # If source vertex is a leaf or internal vertex doesn't have 1 in and 1 out edges - add them to new graph
-            # and continue
-            if not adj_vertex:
-                logger.debug('\t%s has no adjacent vertex - add_unchanged', source.sequence)
-                self.add_unchanged(source)
+        for collapsing in collapsable:
+            # Relink vertices in graph_scheme
+            self.graph_scheme[collapsing.ins[0]][1].remove(collapsing.sequence)
+            self.graph_scheme[collapsing.ins[0]][1].append(collapsing.outs[0])
 
-            for inter in adj_vertex:
-                logger.debug('\t\tIterate over intermediate vertices')
-                inter = self.graph_scheme[inter][0]
-                if inter.sequence in obsolete:
-                    logger.debug('\t\tInter %s is in obsolete - skip', inter.sequence)
-                    continue
+            # Vertex in and out neighbours update
+            self.graph_scheme[collapsing.ins[0]][0].outs.remove(collapsing.sequence)
+            self.graph_scheme[collapsing.ins[0]][0].outs.append(collapsing.outs[0])
+            self.graph_scheme[collapsing.outs[0]][0].ins = [collapsing.ins[0]]
 
-                if inter.in_degree != 1 or inter.out_degree != 1:
-                    logger.debug('\t\tInter %s degrees are not singular - add_unchanged(%s, %s)', inter.sequence, source.sequence, inter.sequence)
-                    self.add_unchanged(source, inter)
-                    continue
+            # Edge update
+            first_edge = self.edges[(collapsing.ins[0], collapsing.sequence)][0]
+            second_edge = self.edges[(collapsing.sequence, collapsing.outs[0])][0]
+            first_edge.extend(second_edge)
+            self.edges[(collapsing.ins[0], collapsing.outs[0])].append(first_edge)
 
-                # List of all 3rd layer vertices, adjacent to inter vertex
-                dests = [self.graph_scheme[dest][0] for dest in self.graph_scheme[inter.sequence][1]]
-                # Add new links and edges in collapsed graph
-                for dest in dests:
-                    logger.debug('\t\t\tSource, Inter, Dest - %s %s %s', source.sequence, inter.sequence, dest.sequence)
-                    if dest.sequence in obsolete:
-                        logger.debug('\t\t\t\t%s is obsolete', dest.sequence)
+            # Collapsed vertex and edge removing
+            del self.graph_scheme[collapsing.sequence]
+            del self.edges[(collapsing.sequence, collapsing.outs[0])]
+            del self.edges[(collapsing.ins[0], collapsing.sequence)]
 
-                        if source not in self.collapsed_graph:
-                            logger.debug('\t\t\t\tAdd source %s', source.sequence)
-                            self.collapsed_graph[source.sequence] = source, []
-                        self.collapsed_graph[source.sequence][1].append(inter.sequence)
-                        logger.debug('\t\t\t\tAdd link from source %s to inter %s', source.sequence, inter.sequence)
-                        self.collapsed_edges[(source.sequence, inter.sequence)] = self.edges[(source.sequence, inter.sequence)]
-                        logger.debug('\t\t\t\tAdd unchanged edge between %s %s', source.sequence, inter.sequence)
-                        continue
-                    logger.debug('\t\t\t\tExtend edge with source, inter, dest %s %s %s', source.sequence, inter.sequence, dest.sequence)
-                    self.extend_one_edge(source, inter, dest)
-                logger.debug('\t\tAdd %s to obsolete', inter.sequence)
-                obsolete.add(inter.sequence)
-                if show:
-                    self.slideshow(pause, True, format)
+            # Show image of graph
+            if show:
+                self.slideshow(pause, False, format)
 
     def extend_one_edge(self, source, inter, dest):
         """
@@ -256,7 +223,7 @@ class Graph:
         # Cleave all reads to kmers
         for read in self.reads:
             self.add_read(str(read.seq).upper())
-            # self.add_read(str(read.reverse_complement().seq).upper())
+            self.add_read(str(read.reverse_complement().seq).upper())
 
     def add_read(self, read):
         """
@@ -282,6 +249,9 @@ class Graph:
 
                     self.graph_scheme[source][1].append(destination)
 
+                    self.graph_scheme[source][0].outs.append(destination)
+                    self.graph_scheme[destination][0].ins.append(source)
+
                     edge = Edge(self.graph_scheme[source][0], self.graph_scheme[destination][0])
                     self.edges[(source, destination)].append(edge)
                 continue
@@ -289,11 +259,21 @@ class Graph:
             # Create absent vertex
             elif source in self.graph_scheme and destination not in self.graph_scheme:
                 self.graph_scheme[destination] = (Vertex(destination), [])
+                self.graph_scheme[source][0].outs.append(destination)
+                self.graph_scheme[destination][0].ins.append(source)
             elif source not in self.graph_scheme and destination in self.graph_scheme:
                 self.graph_scheme[source] = (Vertex(source), [])
+                self.graph_scheme[destination][0].ins.append(source)
+                self.graph_scheme[source][0].outs.append(destination)
             else:
                 self.graph_scheme[source] = (Vertex(source), [])
                 self.graph_scheme[destination] = (Vertex(destination), [])
+                self.graph_scheme[source][0].outs.append(destination)
+                self.graph_scheme[destination][0].ins.append(source)
+
+            # ss =
+            # self.vertices.add(Vertex(source))
+            # self.vertices.add(Vertex(destination))
 
             # Increase degrees of vertices
             self.graph_scheme[source][0].increase_out_degree()
@@ -334,18 +314,32 @@ class Graph:
         # Condition about out degree == 0 should be added if you want to delete just leaves
         # Deleting below will be easier in this case
         obsolete_vertices = (i[0] for i in (filter(lambda v: getattr(v[0], 'coverage') < cutoff, self.graph_scheme.values())))
-
+        obsolete_edges = set()
         # Delete vertices with low coverage and their edges
         for v in list(obsolete_vertices):
+            for previous in self.graph_scheme[v.sequence][0].ins:
+                self.graph_scheme[previous][0].outs.remove(v.sequence)
+                self.graph_scheme[previous][1].remove(v.sequence)
+                obsolete_edges.update(self.edges[(previous, v.sequence)])
+            for following in self.graph_scheme[v.sequence][0].outs:
+                try:
+                    self.graph_scheme[following][0].ins.remove(v.sequence)
+                    obsolete_edges.update(self.edges[(v.sequence, following)])
+                except:
+                    pass
+                # self.graph_scheme[following][1].remove(v.sequence)
+
+
             del self.graph_scheme[v.sequence]
+
             # Select all edges where obsolete vertex present
-            obsolete_edges = [e for e in self.edges if e[0] == v.sequence or e[1] == v.sequence]
+            # obsolete_edges = [e for e in self.edges if e[0] == v.sequence or e[1] == v.sequence]
             # Delete obsolete edge from edges and delete links in graph
             for e in obsolete_edges:
-                del self.edges[e]
                 try:
                     self.graph_scheme[e[0]][1].remove(v.sequence)
                     self.graph_scheme[e[1]][1].remove(v.sequence)
+                    del self.edges[e]
                 except:
                     pass
 

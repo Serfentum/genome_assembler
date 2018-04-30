@@ -23,27 +23,29 @@ def launch(filepath, k, include_seq=True, threshold=0.3, format='pdf', output='o
     a.edge_coverage()
 
     # Make plot of full graph
-    a.plot(f'../{output}_original', include_seq, format)
+    # a.plot(f'../{output}_original', include_seq, format)
 
     # Collapse graph and removing low covered vertices
-    a.collapse(show, pause, format)
-    a.remove_outliers(threshold)
+    print(len(a.graph_scheme))
+    for i in range(3):
+        a.collapse(show, pause, format)
+        a.remove_outliers(threshold)
 
     # Compute edge coverage
     a.edge_coverage()
     a.extract(output)
 
     # Create plot of collapsed graph
-    a.plot(f'../{output}collapsed', include_seq, format)
+    # a.plot(f'../{output}collapsed', include_seq, format)
 
 
 
 # Sets
-# a = Graph('../linear', 21)
-launch('../examples/linear', 21, show=False, threshold=0.75, format='png', pause=0.5)
-# a = Graph('/home/arleg/Downloads/hw3_dataset(1).fasta', 3)
+# launch('../examples/linear', 21, show=False)
+# launch('../examples/snp', 3, show=False, threshold=0.5, format='pdf', pause=1, output='rvfdc')
+launch('/home/arleg/Downloads/hw3_dataset(1).fasta', 55, show=False, output='/home/arleg/genome_assembler/test/out')
 # a = launch('examples/snp', 3, show=True, threshold=0.1, format='pdf', pause=1)
-# a = launch('../test2', 3, threshold=0.7)
+# launch('../additional_tests/test3', 3, threshold=0.7, output='/home/arleg/genome_assembler/test/out')
 # a = Graph('/home/arleg/Downloads/s_6_first100000.fastq', 55)
 
 

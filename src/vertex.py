@@ -2,6 +2,9 @@ class Vertex:
     def __init__(self, sequence):
         self.sequence = sequence
         self.coverage = 0
+        # seqs
+        self.ins = []
+        self.outs = []
         self.in_degree = 0
         self.out_degree = 0
 
